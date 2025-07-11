@@ -26,6 +26,13 @@ function interpret_chain(program::AbstractRuleNode, grammar::AbstractGrammar)::S
             return structure_str * bond_str * chain_str
         end
 
+        :(structure * bond * chain) => begin
+            structure_str = interpret_structure(program.children[1], grammar)
+            bond_str = interpret_bond(program.children[2], grammar)
+            chain_str = interpret_chain(program.children[3], grammar)
+            return structure_str * bond_str * chain_str
+        end
+
         :(atom * ringbonds) => begin
             atom_str = interpret_atom(program.children[1], grammar)
             ringbonds_str = interpret_ringbonds(program.children[2], grammar)

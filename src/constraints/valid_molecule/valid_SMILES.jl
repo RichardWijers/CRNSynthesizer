@@ -29,6 +29,28 @@ struct ValidSMILES <: AbstractGrammarConstraint
     grammar_data::GrammarData
 end
 
+function HerbCore.is_domain_valid(constraint::ValidSMILES, grammar::ContextSensitiveGrammar)
+    # TODO: Implement the logic to check if the domain of the ValidSMILES constraint is valid
+    return true
+end
+
+function HerbCore.update_rule_indices!(
+    constraint::ValidSMILES, 
+    n_rules::Integer,
+    mapping::AbstractDict{<:Integer,<:Integer},
+    constraints::Vector{<:AbstractConstraint}
+)
+    # TODO: Implement the logic to update the rule indices of the ValidSMILES constraint
+    update_grammar_data!(constraint.grammar_data, mapping)
+end
+
+function HerbCore.update_rule_indices!(
+    constraint::ValidSMILES, 
+    n_rules::Integer
+)
+    # TODO: Implement the logic to update the rule indices of the ValidSMILES constraint
+end
+
 function HerbConstraints.on_new_node(solver::Solver, constraint::ValidSMILES, path::Vector{Int})
     if solver isa GenericSolver
         node = get_node_at_location(solver, path)

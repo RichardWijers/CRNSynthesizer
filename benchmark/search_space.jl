@@ -1,15 +1,8 @@
 using CRNSynthesizer
-using HerbGrammar, HerbSpecification, HerbSearch, HerbInterpret, HerbConstraints, HerbCore
-using BenchmarkTools
-
-include("data/estherification.jl")
-include("data/water.jl")
-include("data/methane.jl")
-include("data/ethylene.jl")
-
 
 
 # Problem Definition
+include("data/methane.jl")
 problem = methane_problem(selected_known_indices=[1,3], selected_expected_indices=[1,3])
 atoms = get_atoms(problem)
 max_time = 60

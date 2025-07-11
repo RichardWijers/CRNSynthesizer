@@ -77,7 +77,14 @@ function get_relevant_paths(solver::Solver, c::LocalGenericBalancedReaction, pat
 
                         # Combine the paths and holes
                         return vcat(chain_paths, structure_paths), vcat(chain_holes, structure_holes), vcat(required_chain_paths, required_structure_paths)
+                    end
+                    :(structure * bond * chain) => begin
+                        # Get the relevant paths for the structure and chain
+                        structure_paths, structure_holes, required_structure_paths = get_relevant_paths(solver, c, push!(copy(path), 1))
+                        chain_paths, chain_holes, required_chain_paths = get_relevant_paths(solver, c, push!(copy(path), 3))
 
+                        # Combine the paths and holes
+                        return vcat(chain_paths, structure_paths), vcat(chain_holes, structure_holes), vcat(required_chain_paths, required_structure_paths)
                     end
                     :(atom * ringbonds) => begin
                         atom_path = push!(copy(path), 1)

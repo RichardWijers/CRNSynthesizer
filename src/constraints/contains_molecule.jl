@@ -2,6 +2,11 @@ struct ContainsMolecules <: AbstractGrammarConstraint
     rules::Vector{Tuple{Int, ReactionPosition}}
 end
 
+function HerbCore.is_domain_valid(constraint::ContainsMolecules, grammar::ContextSensitiveGrammar)
+    # TODO: Implement the logic to check if the domain of the ContainsMolecules constraint is valid
+    return true
+end
+
 struct LocalGenericContainsMolecules <: AbstractLocalConstraint
 	path::Vector{Int}
     rules::Vector{Tuple{Int, ReactionPosition}}

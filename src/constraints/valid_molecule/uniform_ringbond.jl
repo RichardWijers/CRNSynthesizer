@@ -160,6 +160,11 @@ function get_ringbond_paths(
                     chain_ringbonds, chain_forbidden, _ = get_ringbond_paths(solver, push!(copy(path), 3), forbidden_group=ringbond_group)
                     return vcat(chain_ringbonds, structure_ringbonds), vcat(chain_forbidden, structure_forbidden), []
                 end
+                :(structure * bond * chain) => begin
+                    structure_ringbonds, structure_forbidden, ringbond_group = get_ringbond_paths(solver, push!(copy(path), 1), forbidden_group=forbidden_group)
+                    chain_ringbonds, chain_forbidden, _ = get_ringbond_paths(solver, push!(copy(path), 3), forbidden_group=ringbond_group)
+                    return vcat(chain_ringbonds, structure_ringbonds), vcat(chain_forbidden, structure_forbidden), []
+                end
                 :(atom * ringbonds) => begin
                     ringbonds_paths, _, _ = get_ringbond_paths(solver, push!(copy(path), 2), atom_path=push!(copy(path), 1))
                     forbidden_group = vcat(forbidden_group, [x[1] for x in ringbonds_paths])

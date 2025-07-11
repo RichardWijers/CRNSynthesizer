@@ -155,6 +155,12 @@ function post_atom_constraints!(solver::Solver, path::Vector{Int}, grammar_data:
 
                 post_atom_constraints!(solver, push!(copy(path), 2), grammar_data, relevant_bonds = bonds)
                 post_atom_constraints!(solver, push!(copy(path), 3), grammar_data, relevant_bonds = [bond_path])
+            elseif rule == :(structure * bond * chain)
+                bond_path = push!(copy(path), 2)
+                bonds = [relevant_bonds..., bond_path]
+
+                post_atom_constraints!(solver, push!(copy(path), 1), grammar_data, relevant_bonds = bonds)
+                post_atom_constraints!(solver, push!(copy(path), 3), grammar_data, relevant_bonds = [bond_path])
             else
                 throw("Unknown chain rule: $rule")
             end

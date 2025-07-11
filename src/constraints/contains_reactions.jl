@@ -2,6 +2,11 @@ struct ContainsReactions <: AbstractGrammarConstraint
     required_molecules::Dict{RequiredMolecule, Vector{Int}}
 end
 
+function HerbCore.is_domain_valid(constraint::ContainsReactions, grammar::ContextSensitiveGrammar)
+    # TODO: Implement the logic to check if the domain of the ContainsReactions constraint is valid
+    return true
+end
+
 struct LocalContainsReactions <: AbstractLocalConstraint
     path::Vector{Int}
     required_molecules::Dict{RequiredMolecule, Vector{Int}}
