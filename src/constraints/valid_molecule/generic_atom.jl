@@ -123,6 +123,16 @@ function propagate_atoms!(solver::Solver, constraint::GenericAtomConnections, pa
                 propagate_atoms!(solver, constraint, push!(copy(path), 3), bond_paths=[push!(copy(path), 1)])
             end
 
+            # Chain option with three children
+            :(structure * bond * chain) => begin
+                # The structure will have the bond and previous collected bond_paths and holes
+                bond_paths = push!(copy(bond_paths), push!(copy(path), 2))
+                propagate_atoms!(solver, constraint, push!(copy(path), 1), bond_paths=bond_paths, holes=holes)
+
+                # The chain will only have the bond be relevant
+                propagate_atoms!(solver, constraint, push!(copy(path), 3), bond_paths=[push!(copy(path), 2)])
+            end
+
             # Structure option with three children
             :(atom * ringbonds * branches) => begin
                 # TODO: Check if the following propagate_atoms! is correct
