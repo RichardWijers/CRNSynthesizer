@@ -7,6 +7,27 @@ struct BalancedReaction <: AbstractGrammarConstraint
     end
 end
 
+function HerbCore.is_domain_valid(constraint::BalancedReaction, grammar::ContextSensitiveGrammar)
+    # TODO: Check if the grammar is valid for balanced reactions
+    return true
+end
+
+
+function HerbCore.update_rule_indices!(
+    constraint::BalancedReaction, 
+    n_rules::Integer
+)
+    return
+end
+
+function HerbCore.update_rule_indices!(
+    constraint::BalancedReaction, 
+    n_rules::Integer,
+    mapping::AbstractDict{<:Integer,<:Integer},
+    constraints::Vector{<:AbstractConstraint}
+)
+    return
+end
 
 struct AtomCounts
     atom_counts::Dict{String, Int}
@@ -70,22 +91,16 @@ struct LocalBalancedReaction <: AbstractLocalConstraint
     rule_to_atoms::Dict{Int, Dict{Any, Any}}
     left_possibilities::Vector{ReactionPossibility}
     right_possibilities::Vector{ReactionPossibility}
-    NetworkProperties::LocalNetworkProperties
-    last_reaction::Bool
-end
-function LocalBalancedReaction(path::Vector{Int}, input_molecule_paths::Vector{Vector{Int}}, output_molecule_paths::Vector{Vector{Int}}, rule_to_atoms::Dict{Int, Dict{Any, Any}}, left_possibilities::Vector{ReactionPossibility}, right_possibilities::Vector{ReactionPossibility}, last_reaction::Bool)
-    local_network_properties = LocalNetworkProperties(Vector{Int}(), ProblemDefinition(), Dict{Molecule, StateInt}(), Dict{AbstractLocalConstraint, Vector{Molecule}}())
-    return LocalBalancedReaction(path, input_molecule_paths, output_molecule_paths, rule_to_atoms, left_possibilities, right_possibilities, local_network_properties, last_reaction)
 end
 
 import Base.==
 function ==(a::LocalBalancedReaction, b::LocalBalancedReaction)
-    return a.path == b.path && a.input_molecule_paths == b.input_molecule_paths && a.output_molecule_paths == b.output_molecule_paths && a.last_reaction == b.last_reaction
+    return a.path == b.path && a.input_molecule_paths == b.input_molecule_paths && a.output_molecule_paths == b.output_molecule_paths
 end
 
 import Base.hash
 function hash(a::LocalBalancedReaction, h::UInt)
-    return hash(a.path, h) + hash(a.input_molecule_paths, h) + hash(a.output_molecule_paths, h) + hash(a.last_reaction, h)
+    return hash(a.path, h) + hash(a.input_molecule_paths, h) + hash(a.output_molecule_paths, h)
 end
 
 
@@ -123,17 +138,13 @@ function get_molecule_paths(solver::Solver, path::Vector{Int})
     return result
 end
 
-function post_reaction_constraints!(solver::Solver, reaction_paths::Vector{Vector{Int}}, local_network_properties::LocalNetworkProperties)
+function post_reaction_constraints!(solver::Solver, reaction_paths::Vector{Vector{Int}})
 
     reaction_constraints = []
     for (i, path) in enumerate(reaction_paths)
         input_paths = get_molecule_paths(solver, push!(copy(path), 1))
         output_paths = get_molecule_paths(solver, push!(copy(path), 2))
         
-        # updated_paths = Vector{Vector{Int}}()
-        # HerbConstraints.post!(solver, LocalBalancedReaction(path, input_paths, output_paths, updated_paths, possible_left, possible_right))
-        # HerbConstraints.post!(solver, LocalBalancedReaction(path, input_paths, output_paths))
-
         rule_to_atoms = Dict{Int, Dict{Any, Any}}()
         molecule_rules = findall(solver.grammar.domains[:molecule])
 
@@ -166,9 +177,7 @@ function post_reaction_constraints!(solver::Solver, reaction_paths::Vector{Vecto
             output_paths, 
             rule_to_atoms, 
             possible_left, 
-            possible_right, 
-            local_network_properties,
-            i == length(reaction_paths)
+            possible_right
         )
         HerbConstraints.post!(solver, balanced_reaction)
         push!(reaction_constraints, balanced_reaction)
@@ -204,10 +213,6 @@ function HerbConstraints.on_new_node(solver::Solver, constraint::BalancedReactio
             input_paths = get_molecule_paths(solver, push!(copy(path), 1))
             output_paths = get_molecule_paths(solver, push!(copy(path), 2))
             
-            # updated_paths = Vector{Vector{Int}}()
-            # HerbConstraints.post!(solver, LocalBalancedReaction(path, input_paths, output_paths, updated_paths, possible_left, possible_right))
-            # HerbConstraints.post!(solver, LocalBalancedReaction(path, input_paths, output_paths))
-
             rule_to_atoms = Dict{Int, Dict{Any, Any}}()
             molecule_rules = findall(solver.grammar.domains[:molecule])
 
@@ -233,7 +238,7 @@ function HerbConstraints.on_new_node(solver::Solver, constraint::BalancedReactio
                 return
             end
 
-            HerbConstraints.post!(solver, LocalBalancedReaction(path, input_paths, output_paths, rule_to_atoms, possible_left, possible_right, false))
+            HerbConstraints.post!(solver, LocalBalancedReaction(path, input_paths, output_paths, rule_to_atoms, possible_left, possible_right))
         end
     end
 end
@@ -433,9 +438,9 @@ function HerbConstraints.propagate!(solver::Solver, constraint::LocalBalancedRea
 
 
 
-    required_molecules = constraint.NetworkProperties.problem.known_molecules
-    fixed_left = map(x -> solver.grammar.rules[x], fixed_left)
-    fixed_right = map(x -> solver.grammar.rules[x], fixed_right)
+    # required_molecules = constraint.NetworkProperties.problem.known_molecules
+    # fixed_left = map(x -> solver.grammar.rules[x], fixed_left)
+    # fixed_right = map(x -> solver.grammar.rules[x], fixed_right)
 
     # fixed = vcat(fixed_left, fixed_right)
     # for f in fixed

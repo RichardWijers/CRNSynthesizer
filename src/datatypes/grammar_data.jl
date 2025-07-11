@@ -1,7 +1,34 @@
-struct GrammarData
+# TODO: move back to immutable struct when possible
+mutable struct GrammarData
     grammar_to_available_atom_connections::Dict{Int, Int}
     grammar_to_bond_connections::Dict{Int, Int}
     ringbond_digit_to_grammar::Dict{Int, Int}
+end
+
+
+function update_grammar_data!(grammar_data::GrammarData, mapping::AbstractDict{<:Integer,<:Integer})
+    new_grammar_to_available_atom_connections = Dict{Int, Int}()
+    new_grammar_to_bond_connections = Dict{Int, Int}()
+    new_ringbond_digit_to_grammar = Dict{Int, Int}()
+
+    for (key, value) in grammar_data.grammar_to_available_atom_connections
+        new_key = get(mapping, key, key)
+        new_grammar_to_available_atom_connections[new_key] = value
+    end
+
+    for (key, value) in grammar_data.grammar_to_bond_connections
+        new_key = get(mapping, key, key)
+        new_grammar_to_bond_connections[new_key] = value
+    end
+
+    for (key, value) in grammar_data.ringbond_digit_to_grammar
+        new_value = get(mapping, value, value)
+        new_ringbond_digit_to_grammar[key] = new_value
+    end
+
+    grammar_data.grammar_to_available_atom_connections = new_grammar_to_available_atom_connections
+    grammar_data.grammar_to_bond_connections = new_grammar_to_bond_connections
+    grammar_data.ringbond_digit_to_grammar = new_ringbond_digit_to_grammar
 end
 
 function digit_to_grammar(grammar_data::GrammarData, digit::Int)::Int

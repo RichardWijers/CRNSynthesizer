@@ -25,8 +25,8 @@ end
 ############ Herb Functions #############
 #########################################
 
-HerbCore.is_domain_valid(c, grammar) = true
-HerbCore.update_rule_indices!(c, new_indices) = nothing
+# HerbCore.is_domain_valid(c, grammar) = true
+# HerbCore.update_rule_indices!(c, new_indices) = nothing
 
 get_rules(rn::RuleNode)::Vector{Int} = [rn.ind]
 function get_rules(hole::AbstractHole)::Vector{Int}
@@ -199,7 +199,6 @@ function custom_shorthand2rulenode(ex::Expr)
 end
 
 
-
 function c_add_rule!(g::AbstractGrammar, e::Expr; recalculate::Bool=false)
     if e.head == :(=) && typeof(e.args[1]) == Symbol
         s = e.args[1]		# Name of return type
@@ -229,6 +228,11 @@ function c_add_rule!(g::AbstractGrammar, e::Expr; recalculate::Bool=false)
         g.childtypes = [get_childtypes(rule, alltypes) for rule ∈ g.rules]
         g.bychildtypes = [BitVector([g.childtypes[i1] == g.childtypes[i2] for i2 ∈ 1:length(g.rules)]) for i1 ∈ 1:length(g.rules)]
         g.domains = Dict(type => BitArray(r ∈ g.bytype[type] for r ∈ 1:length(g.rules)) for type ∈ keys(g.bytype))
+
+        # update grammar constraints to enforce domain correctness
+        for c in g.constraints
+            HerbCore.update_rule_indices!(c, g)
+        end
     end
     return g
 end
