@@ -1,5 +1,5 @@
 # Estherification Reaction Experiment
-using CRNSynthesizer, Catalyst, OrdinaryDiffEq
+using CRNSynthesizer, Catalyst
 
 function estherification_problem(;
     selected_known_indices=1:6,
@@ -17,8 +17,8 @@ function estherification_problem(;
 
     # Solve the ODE problem
     prob = ODEProblem(rn, u0, tspan, p)
-    sol = solve(prob, Tsit5())
-    data_sol = solve(prob, Tsit5(), saveat=1.0)
+    sol = solve(prob)
+    data_sol = solve(prob, saveat=1.0)
 
     # Gather the time data and expected values for the known species
     time_data = data_sol.t[1:end]
