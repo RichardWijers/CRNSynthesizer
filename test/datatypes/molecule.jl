@@ -1,4 +1,4 @@
-@testset "BondType" begin
+@testitem "BondType" begin
     @test instances(BondType) == (single, double, triple, quadruple)
 
     @testset "to_string" begin
@@ -9,7 +9,7 @@
     end
 end
 
-@testset "Atom" begin
+@testitem "Atom" begin
     atom = Atom("H")
     @test atom.name == "H"
 
@@ -17,7 +17,7 @@ end
     @test atom.name == "O"
 end
 
-@testset "Bond" begin
+@testitem "Bond" begin
     bond = Bond(1, 2, single)
     @test bond.from == 1
     @test bond.to == 2
@@ -34,7 +34,7 @@ end
     @test bond.bond_type == triple
 end
 
-@testset "Molecule" begin
+@testitem "Molecule" begin
 
     @testset "Constructor" begin
         atoms = [Atom("H"), Atom("O")]

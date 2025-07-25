@@ -43,7 +43,7 @@ function network_grammar(atoms::Vector{Atom}; problem::ProblemDefinition=Problem
     return grammar
 end
 
-function network_grammar(molecules::Vector{Molecule}; problem::ProblemDefinition=ProblemDefinition(), required_molecules::Vector{Molecule}=Vector{Molecule}(), settings::SynthesizerSettings=SynthesizerSettings())
+function network_grammar(molecules::Vector{Molecule}; problem::ProblemDefinition=ProblemDefinition(), required_molecules::Vector{Molecule}=Vector{Molecule}(), settings::SynthesizerSettings=SynthesizerSettings(), check_required::Bool=true)
     grammar = network_grammar(settings=settings)
     merge_grammars!(grammar, reaction_grammar(add_required_rule=true, complete_grammar=false))
 
@@ -68,7 +68,7 @@ function network_grammar(molecules::Vector{Molecule}; problem::ProblemDefinition
     end
 
 
-    if length(required) == 0 && length(required_molecules) == 0
+    if length(required) == 0 && length(required_molecules) == 0 && check_required
         addconstraint!(grammar, Forbidden(@c_rulenode 7))
     elseif !(haskey(settings.options, :disable_contains_molecules) && settings.options[:disable_contains_molecules])
         addconstraint!(grammar, ContainsMolecules(required_rules))

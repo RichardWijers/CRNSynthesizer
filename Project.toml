@@ -1,7 +1,7 @@
 name = "CRNSynthesizer"
 uuid = "c6b42bea-1eaf-4ccc-84db-323154b954a2"
-version = "0.1.1"
 authors = ["Richard Wijers <Rwijers10@gmail.com>"]
+version = "0.1.1"
 
 [deps]
 Catalyst = "479239e8-5488-4da2-87a7-35f2df7eef83"
@@ -33,6 +33,7 @@ HerbGrammar = "0.6.1"
 HerbInterpret = "0.2.1"
 HerbSearch = "0.4.7"
 HerbSpecification = "0.2.1"
+JET = "0.9.19"
 MLStyle = "0.4.17"
 MacroTools = "0.5.16"
 Optimization = "4.2.0"
@@ -40,13 +41,18 @@ OptimizationNLopt = "0.3.2"
 OrdinaryDiffEq = "6.95.1"
 Term = "2.0.7"
 Test = "1.11.0"
+TestItemRunner = "1.1.0"
+TestItems = "1.0.0"
 julia = "1.11"
 
 [extras]
 AirspeedVelocity = "1c8270ee-6884-45cc-9545-60fa71ec23e4"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 
 [targets]
-test = ["Aqua", "Test"]
+test = ["Aqua", "JET", "Test", "TestItems", "TestItemRunner"]
