@@ -449,3 +449,28 @@ function HerbConstraints.propagate!(solver::Solver, constraint::LocalBalancedRea
     #     end
     # end
 end
+
+
+function is_valid(candidate::Reaction, constraint::BalancedReaction)
+
+    input_counts = Dict{String, Int}()
+    output_counts = Dict{String, Int}()
+
+    for (num, molecule) in candidate.inputs
+        for (atom, count) in count_atoms(molecule)
+            input_counts[atom] = get(input_counts, atom, 0) + count * num
+        end
+    end
+
+    for (num, molecule) in candidate.outputs
+        for (atom, count) in count_atoms(molecule)
+            output_counts[atom] = get(output_counts, atom, 0) + count * num
+        end
+    end
+
+    if input_counts != output_counts
+        return false
+    end
+
+    return true
+end

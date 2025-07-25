@@ -2,6 +2,37 @@ struct ContainsReactions <: AbstractGrammarConstraint
     required_molecules::Dict{RequiredMolecule, Vector{Int}}
 end
 
+function ContainsReactions(grammar::ContextSensitiveGrammar, problem_required_molecules::Vector{RequiredMolecule}, reactions::Vector{Reaction})
+    reaction_to_rule = Dict{Any, Int}()
+    for (i, rule) in enumerate(grammar.rules)
+        reaction_to_rule[rule] = i
+    end
+    
+    required_molecules::Dict{RequiredMolecule, Vector{Int}} = Dict{RequiredMolecule, Vector{Int}}()
+    for required_molecule in problem_required_molecules
+        required_molecules[required_molecule] = []
+
+        for reaction in reactions
+            if required_molecule.position == INPUT
+                if any(input -> input[2] == required_molecule.molecule, reaction.inputs)
+                    push!(required_molecules[required_molecule], reaction_to_rule[:($reaction)])
+                end
+            elseif required_molecule.position == OUTPUT
+                if any(output -> output[2] == required_molecule.molecule, reaction.outputs)
+                    push!(required_molecules[required_molecule], reaction_to_rule[:($reaction)])
+                end
+            else
+                if any(input -> input[2] == required_molecule.molecule, reaction.inputs) ||
+                   any(output -> output[2] == required_molecule.molecule, reaction.outputs)
+                    push!(required_molecules[required_molecule], reaction_to_rule[:($reaction)])
+                end
+            end
+        end
+    end
+
+    return ContainsReactions(required_molecules)
+end
+
 function HerbCore.is_domain_valid(constraint::ContainsReactions, grammar::ContextSensitiveGrammar)
     # TODO: Implement the logic to check if the domain of the ContainsReactions constraint is valid
     return true
@@ -104,4 +135,31 @@ function check_contains_reactions(solver::Solver, constraint::LocalContainsReact
 
         _ => throw("Unexpected rule: $rule")
     end
+end
+
+
+
+function is_valid(candidate::ReactionNetwork, constraint::ContainsReactions)
+    required_molecules = keys(constraint.required_molecules)
+    found = falses(length(required_molecules))
+
+    for reaction in candidate.reactions
+        for (_, molecule) in reaction.inputs
+            for (i, required_molecule) in enumerate(required_molecules)
+                if (required_molecule.position == INPUT || required_molecule.position == UNKNOWN) && molecule == required_molecule.molecule
+                    found[i] = true
+                end
+            end
+        end
+
+        for (_, molecule) in reaction.outputs
+            for (i, required_molecule) in enumerate(required_molecules)
+                if (required_molecule.position == OUTPUT || required_molecule.position == UNKNOWN) && molecule == required_molecule.molecule
+                    found[i] = true
+                end
+            end
+        end
+    end
+
+    return all(found)
 end
