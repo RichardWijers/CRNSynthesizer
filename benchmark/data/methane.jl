@@ -1,8 +1,6 @@
 using CRNSynthesizer, Catalyst
 
-function methane_problem(;
-    selected_known_indices=1:4,
-    selected_expected_indices=1:4)
+function methane_problem(; selected_known_indices = 1:4, selected_expected_indices = 1:4)
     # Define the methane combustion reaction network
     rn = @reaction_network begin
         p1, CH₄ + 2O₂ --> CO₂ + 2H₂O
@@ -16,7 +14,7 @@ function methane_problem(;
     # Solve the ODE problem
     prob = ODEProblem(rn, u0, tspan, p)
     sol = solve(prob)
-    data_sol = solve(prob, saveat=1.0)
+    data_sol = solve(prob; saveat = 1.0)
 
     # Gather the time data and expected values
     time_data = data_sol.t[1:end]
@@ -32,14 +30,9 @@ function methane_problem(;
         from_SMILES("[O]=[C]=[O]"),
         from_SMILES("[H]-[O]-[H]")
     ]
-    
+
     # All expected profiles
-    all_expected = [
-        expected_CH4,
-        expected_O2,
-        expected_CO2,
-        expected_H2O
-    ]
+    all_expected = [expected_CH4, expected_O2, expected_CO2, expected_H2O]
 
     # Define the known molecules based on selected indices
     known_molecules = all_molecules[selected_known_indices]
@@ -54,10 +47,10 @@ function methane_problem(;
     end
 
     # Define the problem
-    problem = ProblemDefinition(
-        known_molecules=known_molecules,
-        expected_profiles=expected_profiles,
-        time_data=time_data
+    problem = ProblemDefinition(;
+        known_molecules = known_molecules,
+        expected_profiles = expected_profiles,
+        time_data = time_data
     )
 
     return problem

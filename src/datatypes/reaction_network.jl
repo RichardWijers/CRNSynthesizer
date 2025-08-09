@@ -4,9 +4,17 @@ struct Reaction
     outputs::Vector{Tuple{Int, Molecule}}
     ignore_balanced::Bool
 end
-Reaction(rate::Union{Nothing, Float64}, inputs::Vector{Tuple{Int, Molecule}}, outputs::Vector{Tuple{Int, Molecule}}) = Reaction(rate, inputs, outputs, false)
-Reaction(inputs::Vector{Tuple{Int, Molecule}}, outputs::Vector{Tuple{Int, Molecule}}) = Reaction(nothing, inputs, outputs, false)
-
+function Reaction(
+        rate::Union{Nothing, Float64},
+        inputs::Vector{Tuple{Int, Molecule}},
+        outputs::Vector{Tuple{Int, Molecule}}
+)
+    Reaction(rate, inputs, outputs, false)
+end
+function Reaction(
+        inputs::Vector{Tuple{Int, Molecule}}, outputs::Vector{Tuple{Int, Molecule}})
+    Reaction(nothing, inputs, outputs, false)
+end
 
 import Base: hash, ==
 
@@ -49,7 +57,6 @@ function ==(a::Reaction, b::Reaction)
     return true
 end
 
-
 function Reaction(inputs::Vector{Molecule}, outputs::Vector{Molecule})
     input_dict = Dict{Molecule, Int}()
     for (i, input) in enumerate(inputs)
@@ -82,7 +89,7 @@ function get_reactions(network::ReactionNetwork)
     return network.reactions
 end
 
-function get_molecules(network::ReactionNetwork):: Vector{Molecule}
+function get_molecules(network::ReactionNetwork)::Vector{Molecule}
     molecules = Set{Molecule}()
     for reaction in network.reactions
         for (count, molecule) in reaction.inputs
@@ -137,7 +144,7 @@ function is_valid(model)
 
         input_species = Dict{String, Int}()
         output_species = Dict{String, Int}()
-        
+
         for (count, input) in reaction.inputs
             for subspecies in input.atoms
                 if haskey(input_species, subspecies.name)
@@ -147,7 +154,7 @@ function is_valid(model)
                 end
             end
         end
-        
+
         for (count, output) in reaction.outputs
             for subspecies in output.atoms
                 if haskey(output_species, subspecies.name)
@@ -157,20 +164,20 @@ function is_valid(model)
                 end
             end
         end
-        
+
         if input_species != output_species
             return false
         end
     end
 
     # TODO: Check if a reaction is not the same on both sides
-    
 
     return true
 end
 
-
-function compare_networks(network1::ReactionNetwork, network2::ReactionNetwork; check_rates::Bool = true)
+function compare_networks(
+        network1::ReactionNetwork, network2::ReactionNetwork; check_rates::Bool = true
+)
     # Check if the number of reactions is the same
     if length(network1.reactions) != length(network2.reactions)
         return false
@@ -191,7 +198,8 @@ function compare_networks(network1::ReactionNetwork, network2::ReactionNetwork; 
                 continue
             end
 
-            if length(reaction1.inputs) != length(reaction2.inputs) || length(reaction1.outputs) != length(reaction2.outputs)
+            if length(reaction1.inputs) != length(reaction2.inputs) ||
+               length(reaction1.outputs) != length(reaction2.outputs)
                 continue
             end
 
@@ -245,21 +253,32 @@ end
 
 function to_string(reaction::Reaction; compact::Bool = true)
     # Build reactants string
-    reactants = isempty(reaction.inputs) ? "∅" : join(
-        ["$(input[1] > 1 ? "$(input[1])" : "")$(compact ? to_compact(input[2]) : to_SMILES(input[2]))" 
-            for input in reaction.inputs], " + ")
-    
+    reactants = if isempty(reaction.inputs)
+        "∅"
+    else
+        join(
+            ["$(input[1] > 1 ? "$(input[1])" : "")$(compact ? to_compact(input[2]) : to_SMILES(input[2]))"
+             for input in reaction.inputs],
+            " + "
+        )
+    end
+
     # Build arrow with rate
     arrow = isnothing(reaction.rate) ? " → " : " -($(reaction.rate))→ "
-    
+
     # Build products string
-    products = isempty(reaction.outputs) ? "∅" : join(
-        ["$(output[1] > 1 ? "$(output[1])" : "")$(compact ? to_compact(output[2]) : to_SMILES(output[2]))" 
-            for output in reaction.outputs], " + ")
+    products = if isempty(reaction.outputs)
+        "∅"
+    else
+        join(
+            ["$(output[1] > 1 ? "$(output[1])" : "")$(compact ? to_compact(output[2]) : to_SMILES(output[2]))"
+             for output in reaction.outputs],
+            " + "
+        )
+    end
 
     return "$(reactants)$(arrow)$(products)"
 end
-
 
 # Function to neatly print a model
 function Base.show(io::IO, model::ReactionNetwork)
@@ -282,7 +301,6 @@ function to_string(model::ReactionNetwork; compact::Bool = true)
     end
     return result
 end
-
 
 function count_species(network)
     # Count the number of unique species in the network

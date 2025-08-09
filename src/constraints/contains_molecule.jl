@@ -3,7 +3,10 @@ struct ContainsMolecules <: AbstractGrammarConstraint
     rules::Vector{Tuple{Int, ReactionPosition}}
 end
 
-function ContainsMolecules(grammar::ContextSensitiveGrammar, molecules::Vector{Tuple{Molecule, ReactionPosition}})
+function ContainsMolecules(
+        grammar::ContextSensitiveGrammar, molecules::Vector{Tuple{
+            Molecule, ReactionPosition}}
+)
     required_rules = Vector{Tuple{Int, ReactionPosition}}()
 
     for (i, (required_molecule, position)) in enumerate(molecules)
@@ -15,13 +18,15 @@ function ContainsMolecules(grammar::ContextSensitiveGrammar, molecules::Vector{T
     return ContainsMolecules(molecules, required_rules)
 end
 
-function HerbCore.is_domain_valid(constraint::ContainsMolecules, grammar::ContextSensitiveGrammar)
+function HerbCore.is_domain_valid(
+        constraint::ContainsMolecules, grammar::ContextSensitiveGrammar
+)
     # TODO: Implement the logic to check if the domain of the ContainsMolecules constraint is valid
     return true
 end
 
 struct LocalGenericContainsMolecules <: AbstractLocalConstraint
-	path::Vector{Int}
+    path::Vector{Int}
     rules::Vector{Tuple{Int, ReactionPosition}}
 end
 
@@ -33,8 +38,14 @@ struct LocalUniformContainsMolecules <: AbstractLocalConstraint
     possibilities::Vector{Vector{Int}}
 end
 
-function get_required_molecules_paths(solver::Solver, path::Vector{Int}, result::Vector{Vector{Vector{Int}}} = Vector{Vector{Vector{Int}}}())
-    function get_paths(solver, path::Vector{Int}, result::Vector{Vector{Int}} = Vector{Vector{Int}}())
+function get_required_molecules_paths(
+        solver::Solver,
+        path::Vector{Int},
+        result::Vector{Vector{Vector{Int}}} = Vector{Vector{Vector{Int}}}()
+)
+    function get_paths(
+            solver, path::Vector{Int}, result::Vector{Vector{Int}} = Vector{Vector{Int}}()
+    )
         node = get_node_at_location(solver, path)
         type = get_node_type(solver.grammar, node)
         if type == :required_molecule
@@ -62,29 +73,34 @@ function get_required_molecules_paths(solver::Solver, path::Vector{Int}, result:
     return result
 end
 
-function get_required_molecules_possibilities(solver::Solver, paths::Vector{Vector{Vector{Int}}}, flattened::Vector{Vector{Int}}, rules::Vector{Tuple{Int, ReactionPosition}})::Vector{Vector{Int}}
+function get_required_molecules_possibilities(
+        solver::Solver,
+        paths::Vector{Vector{Vector{Int}}},
+        flattened::Vector{Vector{Int}},
+        rules::Vector{Tuple{Int, ReactionPosition}}
+)::Vector{Vector{Int}}
     # Initialize with empty sequence
     current_options = [Int[]]
-    
+
     # Calculate reaction boundaries for quick lookup
     reaction_boundaries = [0]
     for path_group in paths
         push!(reaction_boundaries, reaction_boundaries[end] + length(path_group))
     end
-    
+
     # Process each molecule position
     for (reaction_idx, path_group) in enumerate(paths)
         for path in path_group
             node = get_node_at_location(solver, path)
             rules::Vector{Int} = get_rules(node)
-            
+
             new_options = Vector{Vector{Int}}()
-            
+
             for option in current_options
                 # Check if this is the start of a new reaction
                 is_new_reaction = length(option) == reaction_boundaries[reaction_idx]
                 # is_new_reaction == false
-                
+
                 for rule in rules
                     # Enforce non-decreasing order within a reaction
                     if is_new_reaction || rule >= option[end]
@@ -92,17 +108,18 @@ function get_required_molecules_possibilities(solver::Solver, paths::Vector{Vect
                     end
                 end
             end
-            
+
             current_options = new_options
         end
     end
-    
+
     return current_options
 end
 
-function HerbConstraints.on_new_node(solver::Solver, c::ContainsMolecules, path::Vector{Int})
+function HerbConstraints.on_new_node(
+        solver::Solver, c::ContainsMolecules, path::Vector{Int}
+)
     if length(path) == 0
-
         if solver isa GenericSolver
             HerbConstraints.post!(solver, LocalGenericContainsMolecules(path, c.rules))
         else
@@ -116,11 +133,15 @@ function HerbConstraints.on_new_node(solver::Solver, c::ContainsMolecules, path:
 
             # First pass for caching the required paths
             possibilities::Vector{Vector{Int}} = []
-            HerbConstraints.post!(solver, LocalUniformContainsMolecules(path, c.rules, flattened_required_paths, required_paths, possibilities))
+            HerbConstraints.post!(
+                solver,
+                LocalUniformContainsMolecules(
+                    path, c.rules, flattened_required_paths, required_paths, possibilities
+                )
+            )
         end
     end
 end
-
 
 mutable struct RequiredPlaces
     input_holes::Vector{AbstractHole}
@@ -131,12 +152,12 @@ mutable struct RequiredPlaces
     satisfied::Bool
 
     function RequiredPlaces(;
-        input_holes::Vector{AbstractHole}=Vector{AbstractHole}(), 
-        output_holes::Vector{AbstractHole}=Vector{AbstractHole}(), 
-        input_count::Int=0, 
-        output_count::Int=0, 
-        non_uniform::Bool=false,
-        satisfied::Bool=false
+            input_holes::Vector{AbstractHole} = Vector{AbstractHole}(),
+            output_holes::Vector{AbstractHole} = Vector{AbstractHole}(),
+            input_count::Int = 0,
+            output_count::Int = 0,
+            non_uniform::Bool = false,
+            satisfied::Bool = false
     )
         new(input_holes, output_holes, input_count, output_count, non_uniform, satisfied)
     end
@@ -148,24 +169,22 @@ function HerbConstraints.propagate!(solver::Solver, c::LocalGenericContainsMolec
     output_rules = [rule for (rule, position) in c.rules if position == OUTPUT]
     unknown_rules = [rule for (rule, position) in c.rules if position == UNKNOWN]
 
-
-    found_places = _find_required_holes(solver, node, input_rules, output_rules, unknown_rules)
-
+    found_places = _find_required_holes(
+        solver, node, input_rules, output_rules, unknown_rules
+    )
 
     terminal_node = findfirst(==(:(Vector{Molecule}())), solver.grammar.rules)
 
-
-
     if found_places.satisfied
         HerbConstraints.deactivate!(solver, c)
-        return
+        return nothing
     end
 
     if found_places.non_uniform
-        return
+        return nothing
     end
 
-    if length(input_rules) > found_places.input_count 
+    if length(input_rules) > found_places.input_count
         if length(found_places.input_holes) == 0
             HerbConstraints.set_infeasible!(solver)
         elseif length(found_places.input_holes) == 1
@@ -174,7 +193,7 @@ function HerbConstraints.propagate!(solver::Solver, c::LocalGenericContainsMolec
         end
     end
 
-    if length(output_rules) > found_places.output_count 
+    if length(output_rules) > found_places.output_count
         if length(found_places.output_holes) == 0
             HerbConstraints.set_infeasible!(solver)
         elseif length(found_places.output_holes) == 1
@@ -195,17 +214,16 @@ function HerbConstraints.propagate!(solver::Solver, c::LocalGenericContainsMolec
         path = get_path(node, found_places.output_holes[1])
         remove!(solver, path, terminal_node)
     end
-
 end
 
-
-function HerbConstraints.shouldschedule(solver::Solver, c::LocalUniformContainsMolecules, path::Vector{Int})
+function HerbConstraints.shouldschedule(
+        solver::Solver, c::LocalUniformContainsMolecules, path::Vector{Int}
+)
     if path in c.required_paths
         return true
     end
     return false
 end
-
 
 function HerbConstraints.propagate!(solver::Solver, c::LocalUniformContainsMolecules)
     required_input_rules = [rule for (rule, position) in c.rules if position == INPUT]
@@ -247,12 +265,18 @@ function HerbConstraints.propagate!(solver::Solver, c::LocalUniformContainsMolec
         end
     end
 
-    unknown_rules = filter(x -> !(x in required_input_rules || x in required_output_rules), required_unknown_rules)
-    if length(required_input_rules) > length(input_rules) + input_holes || 
-        length(required_output_rules) > length(output_rules) + output_holes
-        length(required_input_rules) + length(required_output_rules) + length(unknown_rules) > length(input_rules) + length(output_rules) + input_holes + output_holes
+    unknown_rules = filter(
+        x -> !(x in required_input_rules || x in required_output_rules),
+        required_unknown_rules
+    )
+    if length(required_input_rules) > length(input_rules) + input_holes ||
+       length(required_output_rules) > length(output_rules) + output_holes
+        length(required_input_rules) +
+        length(required_output_rules) +
+        length(unknown_rules) >
+        length(input_rules) + length(output_rules) + input_holes + output_holes
         HerbConstraints.set_infeasible!(solver)
-        return
+        return nothing
     end
 end
 
@@ -262,11 +286,13 @@ function _find_required_holes(
         input_rules::Vector{Int},
         output_rules::Vector{Int},
         unknown_rules::Vector{Int},
-        found_places::RequiredPlaces=RequiredPlaces(),
+        found_places::RequiredPlaces = RequiredPlaces(),
         current_position::ReactionPosition = UNKNOWN
-    )
+)
     node_type = get_node_type(solver.grammar, node)
-    required_rule = findfirst(==(:(vcat([required_molecule], molecule_list))), solver.grammar.rules)
+    required_rule = findfirst(
+        ==(:(vcat([required_molecule], molecule_list))), solver.grammar.rules
+    )
 
     @match node_type begin
         :molecule_list => begin
@@ -282,20 +308,38 @@ function _find_required_holes(
                     end
                 end
             end
-            for child::Union{AbstractHole, AbstractUniformHole, AbstractRuleNode} in get_children(node)
-                _find_required_holes(solver, child, input_rules, output_rules, unknown_rules, found_places, current_position)
+            for child::Union{AbstractHole, AbstractUniformHole, AbstractRuleNode} in
+                get_children(node)
+                _find_required_holes(
+                    solver,
+                    child,
+                    input_rules,
+                    output_rules,
+                    unknown_rules,
+                    found_places,
+                    current_position
+                )
             end
         end
 
-        :network || :reaction_list  => begin 
-
+        :network ||
+        :reaction_list => begin
             if !isuniform(node)
                 found_places.non_uniform = true
                 return found_places
             end
 
-            for child::Union{AbstractHole, AbstractUniformHole, AbstractRuleNode} in get_children(node)
-                _find_required_holes(solver, child, input_rules, output_rules, unknown_rules, found_places, current_position)
+            for child::Union{AbstractHole, AbstractUniformHole, AbstractRuleNode} in
+                get_children(node)
+                _find_required_holes(
+                    solver,
+                    child,
+                    input_rules,
+                    output_rules,
+                    unknown_rules,
+                    found_places,
+                    current_position
+                )
             end
         end
 
@@ -305,10 +349,29 @@ function _find_required_holes(
                 return found_places
             end
 
-            children::Vector{Union{AbstractHole, AbstractUniformHole, AbstractRuleNode}} = get_children(node)
+            children::Vector{Union{
+                AbstractHole, AbstractUniformHole, AbstractRuleNode}} = get_children(
+                node
+            )
 
-            _find_required_holes(solver, children[1], input_rules, output_rules, unknown_rules, found_places, INPUT)
-            _find_required_holes(solver, children[2], input_rules, output_rules, unknown_rules, found_places, OUTPUT)
+            _find_required_holes(
+                solver,
+                children[1],
+                input_rules,
+                output_rules,
+                unknown_rules,
+                found_places,
+                INPUT
+            )
+            _find_required_holes(
+                solver,
+                children[2],
+                input_rules,
+                output_rules,
+                unknown_rules,
+                found_places,
+                OUTPUT
+            )
         end
 
         :molecule => begin end
@@ -316,15 +379,16 @@ function _find_required_holes(
         :required_molecule => begin
             if current_position == INPUT
                 found_places.input_count += 1
-            elseif current_position == OUTPUT 
+            elseif current_position == OUTPUT
                 found_places.output_count += 1
             else
                 throw(ArgumentError("Position $current_position is not valid"))
             end
 
-            if found_places.input_count >= length(input_rules) && 
-                found_places.output_count >= length(output_rules) && 
-                found_places.input_count + found_places.output_count >= length(input_rules) + length(output_rules) + length(unknown_rules)
+            if found_places.input_count >= length(input_rules) &&
+               found_places.output_count >= length(output_rules) &&
+               found_places.input_count + found_places.output_count >=
+               length(input_rules) + length(output_rules) + length(unknown_rules)
                 found_places.satisfied = true
             end
         end
@@ -335,7 +399,6 @@ function _find_required_holes(
     return found_places
 end
 
-
 function is_valid(candidate, constraint::ContainsMolecules)
     required_molecules = constraint.required_molecules
     found = falses(length(required_molecules))
@@ -343,7 +406,8 @@ function is_valid(candidate, constraint::ContainsMolecules)
     for reaction in candidate.reactions
         for (_, molecule) in reaction.inputs
             for (i, (required_molecule, position)) in enumerate(required_molecules)
-                if (position == INPUT || position == UNKNOWN) && molecule == required_molecule
+                if (position == INPUT || position == UNKNOWN) &&
+                   molecule == required_molecule
                     found[i] = true
                 end
             end
@@ -351,7 +415,8 @@ function is_valid(candidate, constraint::ContainsMolecules)
 
         for (_, molecule) in reaction.outputs
             for (i, (required_molecule, position)) in enumerate(required_molecules)
-                if (position == OUTPUT || position == UNKNOWN) && molecule == required_molecule
+                if (position == OUTPUT || position == UNKNOWN) &&
+                   molecule == required_molecule
                     found[i] = true
                 end
             end

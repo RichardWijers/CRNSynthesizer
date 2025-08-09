@@ -6,7 +6,6 @@ using Catalyst, DiffEqParamEstim, Optimization, OptimizationNLopt, OrdinaryDiffE
 using Term.Progress
 using Term: with, update!
 
-
 include("utils.jl")
 
 include("datatypes/molecule.jl")
@@ -47,6 +46,5 @@ for n in names(@__MODULE__; all = true)
         @eval export $n
     end
 end
-
 
 end # module CRNSynthesizer

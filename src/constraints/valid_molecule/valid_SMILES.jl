@@ -1,29 +1,10 @@
 # TODO: check the place of this definition
 # Define chemical properties
-atom_valences = Dict(
-    "[O]" => 2,
-    "[H]" => 1,
-    "[C]" => 4,
-    "[N]" => 3
-)
-bond_orders = Dict(
-    "-" => 1,
-    "=" => 2,
-    "≡" => 3,
-    "≣" => 4
-)
+atom_valences = Dict("[O]" => 2, "[H]" => 1, "[C]" => 4, "[N]" => 3)
+bond_orders = Dict("-" => 1, "=" => 2, "≡" => 3, "≣" => 4)
 digits = Dict(
-    "1" => 1,
-    "2" => 2,
-    "3" => 3,
-    "4" => 4,
-    "5" => 5,
-    "6" => 6,
-    "7" => 7,
-    "8" => 8,
-    "9" => 9
+    "1" => 1, "2" => 2, "3" => 3, "4" => 4, "5" => 5, "6" => 6, "7" => 7, "8" => 8, "9" => 9
 )
-
 
 struct ValidSMILES <: AbstractGrammarConstraint
     grammar_data::GrammarData
@@ -42,23 +23,22 @@ function HerbCore.is_domain_valid(constraint::ValidSMILES, grammar::ContextSensi
 end
 
 function HerbCore.update_rule_indices!(
-    constraint::ValidSMILES, 
-    n_rules::Integer,
-    mapping::AbstractDict{<:Integer,<:Integer},
-    constraints::Vector{<:AbstractConstraint}
+        constraint::ValidSMILES,
+        n_rules::Integer,
+        mapping::AbstractDict{<:Integer, <:Integer},
+        constraints::Vector{<:AbstractConstraint}
 )
     # TODO: Implement the logic to update the rule indices of the ValidSMILES constraint
     update_grammar_data!(constraint.grammar_data, mapping)
 end
 
-function HerbCore.update_rule_indices!(
-    constraint::ValidSMILES, 
-    n_rules::Integer
-)
+function HerbCore.update_rule_indices!(constraint::ValidSMILES, n_rules::Integer)
     # TODO: Implement the logic to update the rule indices of the ValidSMILES constraint
 end
 
-function HerbConstraints.on_new_node(solver::Solver, constraint::ValidSMILES, path::Vector{Int})
+function HerbConstraints.on_new_node(
+        solver::Solver, constraint::ValidSMILES, path::Vector{Int}
+)
     if solver isa GenericSolver
         node = get_node_at_location(solver, path)
         type = get_node_type(solver.grammar, node)
@@ -68,13 +48,12 @@ function HerbConstraints.on_new_node(solver::Solver, constraint::ValidSMILES, pa
             HerbConstraints.post!(solver, constraint)
         end
     else
-    
         node = get_node_at_location(solver, path)
         grammar = solver.grammar
 
         # Only proceed if node is filled and is a molecule rule
         if !isfilled(node) || grammar.types[HerbCore.get_rule(node)] != :molecule
-            return
+            return nothing
         end
 
         # Post the atom constraints
@@ -86,19 +65,9 @@ function HerbConstraints.on_new_node(solver::Solver, constraint::ValidSMILES, pa
 end
 
 function is_valid(candidate::Molecule, constraints::ValidSMILES)
-    atom_valences = Dict(
-        "O" => 2,
-        "H" => 1,
-        "C" => 4,
-        "N" => 3
-    )
+    atom_valences = Dict("O" => 2, "H" => 1, "C" => 4, "N" => 3)
 
-    bond_orders = Dict(
-        single => 1,
-        double => 2,
-        triple => 3,
-        quadruple => 4
-    )
+    bond_orders = Dict(single => 1, double => 2, triple => 3, quadruple => 4)
 
     atoms = candidate.atoms
     bonds = candidate.bonds
@@ -123,4 +92,3 @@ function is_valid(candidate::Molecule, constraints::ValidSMILES)
 
     return true
 end
-

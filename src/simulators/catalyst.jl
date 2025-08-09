@@ -1,4 +1,6 @@
-function catalyst_simulation(network::ReactionNetwork, problem::ProblemDefinition; verbose = false, max_iters = 10000)
+function catalyst_simulation(
+        network::ReactionNetwork, problem::ProblemDefinition; verbose = false, max_iters = 10000
+)
     parameters = []
 
     crn = []
@@ -11,11 +13,21 @@ function catalyst_simulation(network::ReactionNetwork, problem::ProblemDefinitio
             sym = Symbol("k$(length(parameters) + 1)")
             parameter = @parameters $(sym)
             push!(parameters, parameter[1])
-            push!(crn, Catalyst.Reaction(parameter[1], inputs, outputs, input_amounts, output_amounts))
+            push!(
+                crn,
+                Catalyst.Reaction(
+                    parameter[1], inputs, outputs, input_amounts, output_amounts
+                )
+            )
             continue
         end
 
-        push!(crn, Catalyst.Reaction(reaction.rate, inputs, outputs, input_amounts, output_amounts))
+        push!(
+            crn,
+            Catalyst.Reaction(
+                reaction.rate, inputs, outputs, input_amounts, output_amounts
+            )
+        )
     end
 
     @named crn = ReactionSystem(crn, t)
@@ -32,10 +44,15 @@ function catalyst_simulation(network::ReactionNetwork, problem::ProblemDefinitio
 
     species_names, cost_function = catalyst_cost_function(problem)
 
-    idxs = [findfirst(s -> string(s) == "var\"" * string(species_name) * "\"(t)", species(crn)) for species_name in species_names]
+    idxs = [findfirst(
+                s -> string(s) == "var\"" * string(species_name) * "\"(t)", species(crn))
+            for species_name in species_names]
 
     oprob = ODEProblem{true, SciMLBase.NoSpecialize}(f, u0_dummy, (0.0, 10.0), ps_dummy)
-    prob_generator(prob, p) = remake(prob; u0 = p[1:length(u0_dummy)], p = p[(length(u0_dummy) + 1):end])
+    prob_generator(prob,
+        p) = remake(
+        prob; u0 = p[1:length(u0_dummy)], p = p[(length(u0_dummy) + 1):end]
+    )
 
     loss_function = build_loss_objective(
         oprob,
@@ -51,12 +68,12 @@ function catalyst_simulation(network::ReactionNetwork, problem::ProblemDefinitio
     initial_guesses = [u0_dummy; ps_dummy]
 
     optprob = OptimizationProblem(
-        loss_function, 
-        initial_guesses, 
+        loss_function,
+        initial_guesses;
         lb = [fill(0.0, length(u0_dummy)); fill(0.05, length(ps_dummy))],
         ub = [fill(10.0, length(u0_dummy)); ones(length(ps_dummy))]
     )
-    optsol = solve(optprob, NLopt.LN_NELDERMEAD(), maxiters=max_iters)
+    optsol = solve(optprob, NLopt.LN_NELDERMEAD(); maxiters = max_iters)
 
     fitted_u0 = optsol.u[1:length(u0_dummy)]
     fitted_params = optsol.u[(length(u0_dummy) + 1):end]
@@ -64,7 +81,7 @@ function catalyst_simulation(network::ReactionNetwork, problem::ProblemDefinitio
     oprob_fitted = remake(oprob; u0 = fitted_u0, p = fitted_params)
     sol = solve(oprob_fitted, Tsit5())
 
-    if verbose == true 
+    if verbose == true
         display(crn)
         display(reactions(crn))
         display(fitted_params)
@@ -87,7 +104,6 @@ function create_species(species_tuples::Vector{Tuple{Int, Molecule}}, t::Symboli
     return results, amounts
 end
 
-
 function catalyst_cost_function(problem::ProblemDefinition)
     species_names = [to_SMILES(mol) for mol in collect(keys(problem.expected_profiles))]
     combined_data = nothing
@@ -100,7 +116,6 @@ function catalyst_cost_function(problem::ProblemDefinition)
     end
     return (species_names, L2Loss(problem.time_data, Array(combined_data')))
 end
-
 
 function score(network, problem)
     num_species = count_species(network)

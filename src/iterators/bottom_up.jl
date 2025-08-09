@@ -3,10 +3,9 @@ function HerbSearch.init_combine_structure(iter::BUIterator)
     Dict(:max_combination_depth => 10)
 end
 
-function BUIterator(grammar::AbstractGrammar, start_symbol::Symbol; max_depth::Int=10)
-    return BUIterator(grammar, start_symbol, nothing, max_depth=max_depth)
+function BUIterator(grammar::AbstractGrammar, start_symbol::Symbol; max_depth::Int = 10)
+    return BUIterator(grammar, start_symbol, nothing; max_depth = max_depth)
 end
-
 
 function HerbSearch.combine(iter::BUIterator, state)
     addresses = Vector{CombineAddress}()
@@ -47,13 +46,29 @@ function HerbSearch.combine(iter::BUIterator, state)
         nchildren = length(child_types)
 
         # *Lazily* collect addresses, their combinations, and then filter them based on `check_bound`
-        all_addresses = ((key, typename, idx) for key in keys(HerbSearch.get_bank(iter)) for typename in keys(HerbSearch.get_bank(iter)[key]) for idx in eachindex(HerbSearch.get_bank(iter)[key][typename]))
-        all_combinations = Iterators.product(Iterators.repeated(all_addresses, nchildren)...)
-        bounded_combinations = Iterators.filter(combination -> check_bound(type, combination), all_combinations)
-        bounded_and_typed_combinations = Iterators.filter(appropriately_typed(child_types), bounded_combinations)
+        all_addresses = (
+            (key, typename, idx) for key in keys(HerbSearch.get_bank(iter)) for
+        typename in keys(HerbSearch.get_bank(iter)[key]) for
+        idx in eachindex(HerbSearch.get_bank(iter)[key][typename])
+        )
+        all_combinations = Iterators.product(
+            Iterators.repeated(all_addresses, nchildren)...
+        )
+        bounded_combinations = Iterators.filter(
+            combination -> check_bound(type, combination), all_combinations
+        )
+        bounded_and_typed_combinations = Iterators.filter(
+            appropriately_typed(child_types), bounded_combinations
+        )
 
         # Construct the `CombineAddress`s from the filtered combinations
-        append!(addresses, map(address_pair -> CombineAddress(shape, AccessAddress.(address_pair)), bounded_and_typed_combinations))
+        append!(
+            addresses,
+            map(
+                address_pair -> CombineAddress(shape, AccessAddress.(address_pair)),
+                bounded_and_typed_combinations
+            )
+        )
     end
 
     return addresses, state

@@ -2,12 +2,14 @@ function SMILES_combine_chain(bond, structure, chain)
     structure * bond * chain
 end
 
-function SMILES_grammar(atoms::Vector{Atom}; settings::SynthesizerSettings=SynthesizerSettings())
+function SMILES_grammar(
+        atoms::Vector{Atom}; settings::SynthesizerSettings = SynthesizerSettings()
+)
     grammar = @csgrammar begin
         molecule = chain
 
         chain = atom * ringbonds
-        chain = SMILES_combine_chain(bond, structure, chain) 
+        chain = SMILES_combine_chain(bond, structure, chain)
         # chain = structure * bond * chain
 
         structure = atom * ringbonds * branches
@@ -21,7 +23,7 @@ function SMILES_grammar(atoms::Vector{Atom}; settings::SynthesizerSettings=Synth
         ringbonds = ringbond * ringbonds
 
         digit = "1" | "2" # | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-        
+
         bond = "-" | "=" | "≡" # | "≣"
     end
 
@@ -30,7 +32,10 @@ function SMILES_grammar(atoms::Vector{Atom}; settings::SynthesizerSettings=Synth
         grammar = add_rule!(grammar, :(atom = $atom_str))
     end
 
-    if !(haskey(settings.options, :disable_valid_smiles) && settings.options[:disable_valid_smiles])
+    if !(
+        haskey(settings.options, :disable_valid_smiles) &&
+        settings.options[:disable_valid_smiles]
+    )
         atom_dict, bond_dict = generate_atom_bond_dicts(grammar)
         digit_to_grammar = generate_digit_to_grammar(grammar)
         grammar_data = GrammarData(atom_dict, bond_dict, digit_to_grammar)

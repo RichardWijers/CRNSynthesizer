@@ -1,8 +1,6 @@
 using CRNSynthesizer, Catalyst
 
-function ethylene_problem(;
-    selected_known_indices=1:3,
-    selected_expected_indices=1:3)
+function ethylene_problem(; selected_known_indices = 1:3, selected_expected_indices = 1:3)
     # Define the ethylene glycol formation reaction network
     rn = @reaction_network begin
         p1, H₂O + C₂H₄O --> C₂H₆O₂
@@ -16,7 +14,7 @@ function ethylene_problem(;
     # Solve the ODE problem
     prob = ODEProblem(rn, u0, tspan, p)
     sol = solve(prob)
-    data_sol = solve(prob, saveat=1.0)
+    data_sol = solve(prob; saveat = 1.0)
 
     # Gather the time data and expected values
     time_data = data_sol.t[1:end]
@@ -30,13 +28,9 @@ function ethylene_problem(;
         from_SMILES("[H]-[C](-[O]-1)(-[H])-[C]-1(-[H])-[H]"),       # Ethylene oxide (three-membered ring)
         from_SMILES("[H]-[O]-[C](-[H])(-[H])-[C](-[H])(-[H])-[O]-[H]")         # Ethylene glycol
     ]
-    
+
     # All expected profiles
-    all_expected = [
-        expected_H2O,
-        expected_C2H4O,
-        expected_C2H6O2
-    ]
+    all_expected = [expected_H2O, expected_C2H4O, expected_C2H6O2]
 
     # Define the known molecules based on selected indices
     known_molecules = all_molecules[selected_known_indices]
@@ -52,10 +46,10 @@ function ethylene_problem(;
     end
 
     # Define the problem
-    problem = ProblemDefinition(
-        known_molecules=known_molecules,
-        expected_profiles=expected_profiles,
-        time_data=time_data
+    problem = ProblemDefinition(;
+        known_molecules = known_molecules,
+        expected_profiles = expected_profiles,
+        time_data = time_data
     )
 
     return problem
@@ -71,9 +65,7 @@ function ethylene_network()
 
     # Define the reaction: H₂O + C₂H₄O --> C₂H₆O₂
     reaction = CRNSynthesizer.Reaction(
-        nothing,
-        [(1, all_molecules[1]), (1, all_molecules[2])],
-        [(1, all_molecules[3])]
+        nothing, [(1, all_molecules[1]), (1, all_molecules[2])], [(1, all_molecules[3])]
     )
 
     return CRNSynthesizer.ReactionNetwork([reaction])

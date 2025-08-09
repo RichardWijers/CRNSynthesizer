@@ -1,4 +1,8 @@
-function reaction_grammar(;settings::SynthesizerSettings=SynthesizerSettings(), add_required_rule::Bool=false, complete_grammar::Bool=true)
+function reaction_grammar(;
+        settings::SynthesizerSettings = SynthesizerSettings(),
+        add_required_rule::Bool = false,
+        complete_grammar::Bool = true
+)
     grammar = @csgrammar begin
         reaction = Reaction(molecule_list, molecule_list)
         molecule_list = vcat([molecule], molecule_list)
@@ -17,7 +21,10 @@ function reaction_grammar(;settings::SynthesizerSettings=SynthesizerSettings(), 
     addconstraint!(grammar, Forbidden(@c_rulenode 1{a, a}))
 
     # Makes the molecule list ordered to break symmetries
-    if !(haskey(settings.options, :disable_ordered_molecule_list) && settings.options[:disable_ordered_molecule_list])
+    if !(
+        haskey(settings.options, :disable_ordered_molecule_list) &&
+        settings.options[:disable_ordered_molecule_list]
+    )
         addconstraint!(grammar, Ordered((@c_rulenode 2{a, 2{b, c}}), [:a, :b]))
 
         if add_required_rule
@@ -29,16 +36,20 @@ function reaction_grammar(;settings::SynthesizerSettings=SynthesizerSettings(), 
     end
 
     # Make sure the reactions are atom balanced
-    if !(haskey(settings.options, :disable_balanced_reaction) && settings.options[:disable_balanced_reaction])
-        addconstraint!(grammar, BalancedReaction(complete_grammar=complete_grammar))
+    if !(
+        haskey(settings.options, :disable_balanced_reaction) &&
+        settings.options[:disable_balanced_reaction]
+    )
+        addconstraint!(grammar, BalancedReaction(; complete_grammar = complete_grammar))
     end
 
     return grammar
 end
 
-
-function reaction_grammar(molecules::Vector{Molecule}; settings::SynthesizerSettings=SynthesizerSettings())
-    grammar = reaction_grammar(settings=settings, complete_grammar=false)
+function reaction_grammar(
+        molecules::Vector{Molecule}; settings::SynthesizerSettings = SynthesizerSettings()
+)
+    grammar = reaction_grammar(; settings = settings, complete_grammar = false)
 
     for molecule in molecules
         add_rule!(grammar, :(molecule = $molecule))
@@ -47,8 +58,10 @@ function reaction_grammar(molecules::Vector{Molecule}; settings::SynthesizerSett
     return grammar
 end
 
-function reaction_grammar(atoms::Vector{Atom}; settings::SynthesizerSettings=SynthesizerSettings())
-    grammar = reaction_grammar(settings=settings, complete_grammar=true)
+function reaction_grammar(
+        atoms::Vector{Atom}; settings::SynthesizerSettings = SynthesizerSettings()
+)
+    grammar = reaction_grammar(; settings = settings, complete_grammar = true)
     merge_grammars!(grammar, SMILES_grammar(atoms))
 
     return grammar

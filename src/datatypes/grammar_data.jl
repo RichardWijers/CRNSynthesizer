@@ -5,8 +5,9 @@ mutable struct GrammarData
     ringbond_digit_to_grammar::Dict{Int, Int}
 end
 
-
-function update_grammar_data!(grammar_data::GrammarData, mapping::AbstractDict{<:Integer,<:Integer})
+function update_grammar_data!(
+        grammar_data::GrammarData, mapping::AbstractDict{<:Integer, <:Integer}
+)
     new_grammar_to_available_atom_connections = Dict{Int, Int}()
     new_grammar_to_bond_connections = Dict{Int, Int}()
     new_ringbond_digit_to_grammar = Dict{Int, Int}()
@@ -45,7 +46,6 @@ function grammar_to_bond_connections(grammar_data::GrammarData, rule::Int)::Int
     @assert haskey(grammar_data.grammar_to_bond_connections, rule)
     return grammar_data.grammar_to_bond_connections[rule]
 end
-
 
 function generate_digit_to_grammar(grammar)
     digit_dict = Dict{Int, Int}()
