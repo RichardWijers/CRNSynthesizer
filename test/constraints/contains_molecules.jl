@@ -7,16 +7,19 @@
     m3 = from_SMILES("[H]-[O]-[H]")
 
     # Settings for the synthesizer without the ContainsMolecules constraint
-    settings = SynthesizerSettings(max_depth=7, options=Dict{Symbol, Any}(:disable_contains_molecules => true))
+    settings = SynthesizerSettings(
+        max_depth = 7, options = Dict{Symbol, Any}(:disable_contains_molecules => true)
+    )
 
     # Create a network grammar without the ContainsMolecules constraint
-    without_constraint_grammar = network_grammar([m1, m2, m3], settings=settings)
-    
+    without_constraint_grammar = network_grammar([m1, m2, m3], settings = settings)
+
     # Create a network grammar with the ContainsMolecules constraint
-    with_constraint_grammar = network_grammar([m2, m3], settings=settings, check_required=false)
+    with_constraint_grammar = network_grammar(
+        [m2, m3], settings = settings, check_required = false
+    )
     constraint = ContainsMolecules(with_constraint_grammar, [(m1, INPUT)])
     addconstraint!(with_constraint_grammar, constraint)
-
 
     # Synthesize both options
     iterator = get_iterator(settings, without_constraint_grammar, :network)
@@ -28,7 +31,6 @@
     interpreter = x -> interpret_network(x, with_constraint_grammar)
     with_candidates = Vector{ReactionNetwork}()
     find_programs!(iterator, settings, interpreter, with_candidates)
-
 
     @test length(without_candidates) > 0
     @test length(with_candidates) > 0

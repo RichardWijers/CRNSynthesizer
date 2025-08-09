@@ -35,7 +35,6 @@ end
 end
 
 @testitem "Molecule" begin
-
     @testset "Constructor" begin
         atoms = [Atom("H"), Atom("O")]
         bonds = [Bond(1, 2, single)]
@@ -59,7 +58,6 @@ end
         @test atom_counts["H"] == 2
         @test atom_counts["O"] == 1
     end
-
 
     @testset "From SMILES" begin
         smiles = "[C]-1(=[N]-[O]-1)-[H]"

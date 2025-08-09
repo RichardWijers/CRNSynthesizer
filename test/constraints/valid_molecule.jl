@@ -7,17 +7,18 @@
     a3 = Atom("C")
 
     # Settings for the synthesizer
-    settings = SynthesizerSettings(max_depth=4, options=Dict{Symbol, Any}(:disable_valid_smiles => true))
+    settings = SynthesizerSettings(
+        max_depth = 4, options = Dict{Symbol, Any}(:disable_valid_smiles => true)
+    )
 
     # Create a network grammar without the ValidSMILES constraint
-    without_constraint_grammar = SMILES_grammar([a1, a2, a3], settings=settings)
+    without_constraint_grammar = SMILES_grammar([a1, a2, a3], settings = settings)
     without_constraint_grammar.constraints
 
     # Create a network grammar with the ValidSMILES constraint
-    with_constraint_grammar = SMILES_grammar([a1, a2, a3], settings=settings)
+    with_constraint_grammar = SMILES_grammar([a1, a2, a3], settings = settings)
     constraint = ValidSMILES(with_constraint_grammar)
     addconstraint!(with_constraint_grammar, constraint)
-
 
     # Synthesize both options
     iterator = get_iterator(settings, without_constraint_grammar, :molecule)

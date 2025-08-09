@@ -7,17 +7,18 @@
     m3 = from_SMILES("[H]-[O]-[H]")
 
     # Settings for the synthesizer without the BalancedReaction constraint
-    settings = SynthesizerSettings(max_depth=5, options=Dict{Symbol, Any}(:disable_balanced_reaction => true))
+    settings = SynthesizerSettings(
+        max_depth = 5, options = Dict{Symbol, Any}(:disable_balanced_reaction => true)
+    )
 
     # Create a reaction grammar without the BalancedReaction constraint
-    without_constraint_grammar = reaction_grammar([m1, m2, m3], settings=settings)
+    without_constraint_grammar = reaction_grammar([m1, m2, m3], settings = settings)
 
     # Create a reaction grammar with the BalancedReaction constraint
-    with_constraint_grammar = reaction_grammar([m1, m2, m3], settings=settings)
-    constraint = BalancedReaction(complete_grammar=false)
+    with_constraint_grammar = reaction_grammar([m1, m2, m3], settings = settings)
+    constraint = BalancedReaction(complete_grammar = false)
     addconstraint!(with_constraint_grammar, constraint)
 
-    
     # Synthesize both options
     iterator = get_iterator(settings, without_constraint_grammar, :reaction)
     interpreter = x -> interpret_reaction(x, without_constraint_grammar)
