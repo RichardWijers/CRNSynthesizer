@@ -1,9 +1,9 @@
 # Estherification Reaction Experiment
-using CRNSynthesizer, Catalyst, OrdinaryDiffEq
+using CRNSynthesizer, Catalyst
 
 function estherification_problem(;
-    selected_known_indices=1:6,
-    selected_expected_indices=1:6)
+        selected_known_indices = 1:6, selected_expected_indices = 1:6
+)
     # Define the reaction network
     rn = @reaction_network begin
         p1, CH₂O₂ + C₂H₆O --> C₃H₆O₂ + H₂O
@@ -12,13 +12,20 @@ function estherification_problem(;
 
     # Define the parameters
     tspan = (0.0, 10.0)
-    u0 = [:CH₂O₂ => 2.0, :C₂H₆O => 1.0, :C₃H₆O₂ => 0.0, :H₂O => 0.0, :CH₄O => 2.0, :C₂H₄O₂ => 0.0]
+    u0 = [
+        :CH₂O₂ => 2.0,
+        :C₂H₆O => 1.0,
+        :C₃H₆O₂ => 0.0,
+        :H₂O => 0.0,
+        :CH₄O => 2.0,
+        :C₂H₄O₂ => 0.0
+    ]
     p = [:p1 => 0.2, :p2 => 0.1]
 
     # Solve the ODE problem
     prob = ODEProblem(rn, u0, tspan, p)
-    sol = solve(prob, Tsit5())
-    data_sol = solve(prob, Tsit5(), saveat=1.0)
+    sol = solve(prob)
+    data_sol = solve(prob; saveat = 1.0)
 
     # Gather the time data and expected values for the known species
     time_data = data_sol.t[1:end]
@@ -36,9 +43,9 @@ function estherification_problem(;
         from_SMILES("[H]-[C](=[O])-[O]-[C](-[H])(-[H])-[C](-[H])(-[H])-[H]"),
         from_SMILES("[H]-[O]-[H]"),
         from_SMILES("[C](-[H])(-[H])(-[H])-[O]-[H]"),
-        from_SMILES("[C](-[H])(=[O])-[O]-[C](-[H])(-[H])-[H]"),
+        from_SMILES("[C](-[H])(=[O])-[O]-[C](-[H])(-[H])-[H]")
     ]
-    
+
     # All expected profiles
     all_expected = [
         expected_CH2O2,
@@ -63,15 +70,14 @@ function estherification_problem(;
     end
 
     # Define the problem
-    problem = ProblemDefinition(
-        known_molecules=known_molecules,
-        expected_profiles=expected_profiles,
-        time_data=time_data
+    problem = ProblemDefinition(;
+        known_molecules = known_molecules,
+        expected_profiles = expected_profiles,
+        time_data = time_data
     )
 
     return problem
 end
-
 
 function estherification_network()
 
@@ -86,7 +92,7 @@ function estherification_network()
         from_SMILES("[H]-[C](=[O])-[O]-[C](-[H])(-[H])-[C](-[H])(-[H])-[H]"),
         from_SMILES("[H]-[O]-[H]"),
         from_SMILES("[C](-[H])(-[H])(-[H])-[O]-[H]"),
-        from_SMILES("[C](-[H])(=[O])-[O]-[C](-[H])(-[H])-[H]"),
+        from_SMILES("[C](-[H])(=[O])-[O]-[C](-[H])(-[H])-[H]")
     ]
 
     reaction1 = CRNSynthesizer.Reaction(
@@ -99,6 +105,6 @@ function estherification_network()
         [(1, all_molecules[3]), (1, all_molecules[5])],
         [(1, all_molecules[6]), (1, all_molecules[2])]
     )
-    
+
     return CRNSynthesizer.ReactionNetwork([reaction1, reaction2])
 end

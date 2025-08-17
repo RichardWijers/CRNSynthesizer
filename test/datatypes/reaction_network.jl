@@ -1,4 +1,4 @@
-@testset "ReactionNetwork" begin
+@testitem "ReactionNetwork" begin
     # Test the ReactionNetwork constructor
     reaction1 = Reaction(1.0, [(2, from_SMILES("[H]-[H]"))], [(2, from_SMILES("[O]=[O]"))])
     reaction2 = Reaction(1.0, [(2, from_SMILES("[H]-[H]"))], [(2, from_SMILES("[O]=[O]"))])
@@ -6,7 +6,7 @@
     @test length(rn.reactions) == 2
 end
 
-@testset "is_valid" begin
+@testitem "is_valid" begin
     # Test the is_valid function
     water = from_SMILES("[H]-[O]-[H]")
     hydrogen = from_SMILES("[H]-[H]")

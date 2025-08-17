@@ -1,5 +1,7 @@
-function synthesize_molecules(atoms::Vector{Atom}, settings::SynthesizerSettings)::Vector{Molecule}
-    grammar = SMILES_grammar(atoms, settings=settings)
+function synthesize_molecules(
+        atoms::Vector{Atom}, settings::SynthesizerSettings
+)::Vector{Molecule}
+    grammar = SMILES_grammar(atoms; settings = settings)
     iterator = get_iterator(settings, grammar, :molecule)
 
     candidates = Vector{Molecule}()

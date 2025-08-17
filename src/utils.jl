@@ -1,8 +1,16 @@
 # Function to convert numbers to a subscript format
 function convert_to_subscript(name::String)
     subscript_map = Dict(
-        '0' => '₀', '1' => '₁', '2' => '₂', '3' => '₃', '4' => '₄',
-        '5' => '₅', '6' => '₆', '7' => '₇', '8' => '₈', '9' => '₉'
+        '0' => '₀',
+        '1' => '₁',
+        '2' => '₂',
+        '3' => '₃',
+        '4' => '₄',
+        '5' => '₅',
+        '6' => '₆',
+        '7' => '₇',
+        '8' => '₈',
+        '9' => '₉'
     )
     result = ""
     i = 1
@@ -25,15 +33,15 @@ end
 ############ Herb Functions #############
 #########################################
 
-HerbCore.is_domain_valid(c, grammar) = true
-HerbCore.update_rule_indices!(c, new_indices) = nothing
+# HerbCore.is_domain_valid(c, grammar) = true
+# HerbCore.update_rule_indices!(c, new_indices) = nothing
 
 get_rules(rn::RuleNode)::Vector{Int} = [rn.ind]
 function get_rules(hole::AbstractHole)::Vector{Int}
     return findall(hole.domain)
 end
 function get_rules(hole::AbstractUniformHole)::Vector{Int}
-	return findall(hole.domain)
+    return findall(hole.domain)
 end
 
 # function get_node_type(grammar::AbstractGrammar, node)
@@ -48,7 +56,9 @@ end
 # end
 
 # TODO: check lazy search
-function get_node_type(grammar::AbstractGrammar, node::Union{AbstractUniformHole, AbstractHole})
+function get_node_type(
+        grammar::AbstractGrammar, node::Union{AbstractUniformHole, AbstractHole}
+)
     return grammar.types[findfirst(node.domain)]
 end
 function get_node_type(grammar::AbstractGrammar, node::RuleNode)
@@ -66,10 +76,12 @@ function c_remove_all_but!(set::HerbConstraints.StateSparseSet, vals::Vector{Int
     return true
 end
 
-function c_remove_all_but!(solver::UniformSolver, path::Vector{Int}, rules::Vector{Int}, fix_point::Bool=true)
+function c_remove_all_but!(
+        solver::UniformSolver, path::Vector{Int}, rules::Vector{Int}, fix_point::Bool = true
+)
     node = get_node_at_location(solver, path)
     if node isa RuleNode
-        return
+        return nothing
     end
 
     hole = get_hole_at_location(solver, path)
@@ -84,8 +96,12 @@ function c_remove_all_but!(solver::UniformSolver, path::Vector{Int}, rules::Vect
     end
 end
 
-
-function c_remove_all_but!(solver::GenericSolver, path::Vector{Int}, rules_to_keep::Vector{Int}, fix_point::Bool=true)
+function c_remove_all_but!(
+        solver::GenericSolver,
+        path::Vector{Int},
+        rules_to_keep::Vector{Int},
+        fix_point::Bool = true
+)
     hole = get_hole_at_location(solver, path)
 
     bit_to_keep = BitVector(falses(length(hole.domain)))
@@ -102,16 +118,18 @@ function c_remove_all_but!(solver::GenericSolver, path::Vector{Int}, rules_to_ke
     end
 end
 
-function c_remove!(solver::UniformSolver, path::Vector{Int}, rules::Vector{Int}, fix_point::Bool=true)
+function c_remove!(
+        solver::UniformSolver, path::Vector{Int}, rules::Vector{Int}, fix_point::Bool = true
+)
     node = get_node_at_location(solver, path)
     if node isa RuleNode
-        return
+        return nothing
     end
 
     #remove the rule_index from the state sparse set of the hole
     hole = get_hole_at_location(solver, path)
     domain_updated = false
-    for rule_index ∈ rules
+    for rule_index in rules
         if HerbConstraints.remove!(hole.domain, rule_index)
             domain_updated = true
         end
@@ -143,6 +161,20 @@ end
 #     end
 # end
 
+function c_remove_above!(
+        solver::UniformSolver, path::Vector{Int}, rule_index::Int; fix_point::Bool = true
+)
+    hole = get_hole_at_location(solver, path)
+    if HerbConstraints.remove_above!(hole.domain, rule_index)
+        if isempty(hole.domain)
+            HerbConstraints.set_infeasible!(solver)
+        end
+        HerbConstraints.notify_tree_manipulation(solver, path)
+        if fix_point
+            HerbConstraints.fix_point!(solver)
+        end
+    end
+end
 
 # these are the same functions as in herbcore, however called custom to prevent percompile errors
 macro c_rulenode(ex::Union{Integer, Expr})
@@ -156,7 +188,8 @@ function custom_shorthand2rulenode(ex::Expr)
     # holes with children
     ex = postwalk(ex) do x
         @capture(x, holetype_[Bool[domain__]]{children__}) ||
-            @capture(x, holetype_[domain__]{children__}) || return x
+            @capture(x, holetype_[domain__]{children__}) ||
+            return x
         hole_constructor = _get_hole_name(holetype)
         return :($hole_constructor(BitVector([$(domain...)]), {$(children...)}))
     end
@@ -166,7 +199,8 @@ function custom_shorthand2rulenode(ex::Expr)
     # hole with type Bool, instead of a UniformHole
     ex = prewalk(ex) do x
         @capture(x, holetype_Symbol[Bool[domain__]]) ||
-            @capture(x, holetype_Symbol[domain__]) || return x
+            @capture(x, holetype_Symbol[domain__]) ||
+            return x
         hole_constructor = _get_hole_name(holetype)
         return :($hole_constructor(BitVector([$(domain...)])))
     end
@@ -198,19 +232,21 @@ function custom_shorthand2rulenode(ex::Expr)
     return esc(ex)
 end
 
-
-
-function c_add_rule!(g::AbstractGrammar, e::Expr; recalculate::Bool=false)
+function c_add_rule!(g::AbstractGrammar, e::Expr; recalculate::Bool = false)
     if e.head == :(=) && typeof(e.args[1]) == Symbol
-        s = e.args[1]		# Name of return type
-        rule = e.args[2]	# expression?
+        s = e.args[1]# Name of return type
+        rule = e.args[2]# expression?
         rvec = Any[]
         parse_rule!(rvec, rule)
-        for r ∈ rvec
+        for r in rvec
             # Only add a rule if it does not exist yet. Check for existance
             # with strict equality so that true and 1 are not considered
             # equal. that means we can't use `in` or `∈` for equality checking.
-            if !any(s == type && (r === rule || typeof(r)==Expr && r == rule) for (type, rule) ∈ zip(g.types, g.rules))
+            if !any(
+                s == type && (r === rule || typeof(r)==Expr && r == rule)
+            for
+            (type, rule) in zip(g.types, g.rules)
+            )
                 push!(g.rules, r)
                 push!(g.iseval, iseval(rule))
                 push!(g.types, s)
@@ -225,16 +261,24 @@ function c_add_rule!(g::AbstractGrammar, e::Expr; recalculate::Bool=false)
     if recalculate
         # is_terminal and childtypes need to be recalculated from scratch, since a new type might 
         # be added that was used as a terminal symbol before.
-        g.isterminal = [isterminal(rule, alltypes) for rule ∈ g.rules]
-        g.childtypes = [get_childtypes(rule, alltypes) for rule ∈ g.rules]
-        g.bychildtypes = [BitVector([g.childtypes[i1] == g.childtypes[i2] for i2 ∈ 1:length(g.rules)]) for i1 ∈ 1:length(g.rules)]
-        g.domains = Dict(type => BitArray(r ∈ g.bytype[type] for r ∈ 1:length(g.rules)) for type ∈ keys(g.bytype))
+        g.isterminal = [isterminal(rule, alltypes) for rule in g.rules]
+        g.childtypes = [get_childtypes(rule, alltypes) for rule in g.rules]
+        g.bychildtypes = [BitVector([g.childtypes[i1] == g.childtypes[i2]
+                                     for i2 in 1:length(g.rules)])
+                          for i1 in 1:length(g.rules)]
+        g.domains = Dict(
+            type => BitArray(r in g.bytype[type] for r in 1:length(g.rules))
+        for
+        type in keys(g.bytype)
+        )
+
+        # update grammar constraints to enforce domain correctness
+        for c in g.constraints
+            HerbCore.update_rule_indices!(c, g)
+        end
     end
     return g
 end
-
-
-
 
 # # My constraints are not stateless, so I need a deep copy TODO: Check performance hit and if there are better ways
 # function Base.copy(state::SolverState) 

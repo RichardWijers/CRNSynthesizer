@@ -6,7 +6,6 @@ using Catalyst, DiffEqParamEstim, Optimization, OptimizationNLopt, OrdinaryDiffE
 using Term.Progress
 using Term: with, update!
 
-
 include("utils.jl")
 
 include("datatypes/molecule.jl")
@@ -19,7 +18,6 @@ include("constraints/valid_molecule/uniform_ringbond.jl")
 include("constraints/valid_molecule/generic_atom.jl")
 include("constraints/valid_molecule/uniform_atom.jl")
 include("constraints/valid_molecule/valid_SMILES.jl")
-include("constraints/network_properties.jl")
 include("constraints/balanced_reaction/generic_balanced_reaction.jl")
 include("constraints/balanced_reaction/uniform_balanced_reaction.jl")
 include("constraints/balanced_reaction/balanced_reaction.jl")
@@ -48,6 +46,5 @@ for n in names(@__MODULE__; all = true)
         @eval export $n
     end
 end
-
 
 end # module CRNSynthesizer

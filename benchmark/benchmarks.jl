@@ -4,36 +4,27 @@ using CRNSynthesizer
 include("data/estherification.jl")
 include("data/water.jl")
 
-
 const PROBLEMS = [
     (
         name = "Estherification",
         problem = estherification_problem(),
-        max_iteration_goals = (
-            molecules = 100,
-            reactions = 100,
-            networks = 100,
-        ),
+        max_iteration_goals = (molecules = 100, reactions = 100, networks = 100),
         until_found_goals = (
-            # molecules = ,
-            # reactions = ,
-            # networks = ,
+        # molecules = ,
+        # reactions = ,
+        # networks = ,
         )
     ),
     (
         name = "Water",
         problem = water_problem(),
-        max_iteration_goals = (
-            molecules = 100,
-            reactions = 100,
-            networks = 100,
-        ),
+        max_iteration_goals = (molecules = 100, reactions = 100, networks = 100),
         until_found_goals = (
-            # molecules = ,
-            # reactions = ,
-            # networks = ,
+        # molecules = ,
+        # reactions = ,
+        # networks = ,
         )
-    ),
+    )
 ]
 
 const SUITE = BenchmarkGroup()
@@ -46,7 +37,9 @@ for p in PROBLEMS
 
     SUITE["$name - $(max_iteration_goals.molecules) molecules - from atoms"] = @benchmarkable begin
         atoms = get_atoms($problem)
-        settings = SynthesizerSettings(max_programs=$max_iteration_goals.molecules, max_depth=10)
+        settings = SynthesizerSettings(
+            max_programs = $max_iteration_goals.molecules, max_depth = 10
+        )
         synthesize_molecules(atoms, settings)
     end
 
@@ -92,8 +85,6 @@ for p in PROBLEMS
     # end
 
 end
-
-
 
 # Local usage:
 # benchpkg CRNSynthesizer --rev=dirty --path=. --script=./benchmark/benchmarks.jl --add=HerbSearch#dev-bu-basic-interface

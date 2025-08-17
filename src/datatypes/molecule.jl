@@ -1,8 +1,15 @@
 @enum BondType single double triple quadruple
 
 function to_string(bond_type::BondType)::String
-    return bond_type == single ? "-" :
-           bond_type == double ? "=" : bond_type == triple ? "≡" : "≣"
+    return if bond_type == single
+        "-"
+    elseif bond_type == double
+        "="
+    elseif bond_type == triple
+        "≡"
+    else
+        "≣"
+    end
 end
 
 struct Atom
@@ -28,12 +35,14 @@ struct Molecule
 
     function Molecule(atoms::Vector{Atom}, bonds::Vector{Bond})
         # Create a copy of atoms and sort them
-        sorted_indices = sortperm(atoms, by=atom -> atom.name)
+        sorted_indices = sortperm(atoms; by = atom -> atom.name)
         sorted_atoms = atoms[sorted_indices]
-        
+
         # Create a mapping from old indices to new indices
-        index_map = Dict(old_idx => new_idx for (new_idx, old_idx) in enumerate(sorted_indices))
-        
+        index_map = Dict(
+            old_idx => new_idx for (new_idx, old_idx) in enumerate(sorted_indices)
+        )
+
         # Adjust bonds to reflect the new atom indices
         adjusted_bonds = map(bonds) do bond
             if bond isa Bond
@@ -46,12 +55,11 @@ struct Molecule
         end
 
         # Sort the bonds by the new atom indices
-        sort!(adjusted_bonds, by=bond -> (bond.from, bond.to))
-        
+        sort!(adjusted_bonds; by = bond -> (bond.from, bond.to))
+
         return new(sorted_atoms, adjusted_bonds)
     end
 end
-
 
 # TODO: Think of a better Molecule struct that doesn't have this many symmetries
 import Base.==
@@ -87,7 +95,6 @@ end
 #     return h
 # end
 
-
 Base.show(io::IO, atom::Atom) = print(io, atom.name)
 
 function Base.show(io::IO, bond::Bond)
@@ -113,7 +120,7 @@ end
 function to_compact(molecule::Molecule)
     # Get the atom counts
     atoms = count_atoms(molecule)
-    
+
     # Convert the compact representation to a string
     compact_str = ""
     for (atom_name, count) in atoms
@@ -126,7 +133,6 @@ function to_compact(molecule::Molecule)
 
     return convert_to_subscript(compact_str)
 end
-
 
 function from_SMILES(smiles::String)
     # Extract all atoms
@@ -141,7 +147,7 @@ function from_SMILES(smiles::String)
     processed_smiles = smiles
     for (i, regmatch) in enumerate(atom_matches)
         submatch::String = Base.String(regmatch.match)
-        processed_smiles = replace(processed_smiles, submatch => "[A$i]", count = 1)
+        processed_smiles = replace(processed_smiles, submatch => "[A$i]"; count = 1)
     end
 
     current_atom_idx::Int = 0
@@ -149,7 +155,7 @@ function from_SMILES(smiles::String)
     ring_connections = Dict{Int, Tuple{Int, BondType}}()  # Store atom idx and bond type
     current_bond_type::BondType = single  # Default to single bond
     bonds = Bond[]  # Store bonds
-    
+
     # Iterate safely through characters, handling Unicode properly
     i::Int = firstindex(processed_smiles)
     while i <= lastindex(processed_smiles)
@@ -163,7 +169,9 @@ function from_SMILES(smiles::String)
             end
 
             atom_placeholder = processed_smiles[i:atom_end]
-            atom_idx = parse(Int, match(r"A(\d+)", atom_placeholder).captures[1]::SubString{String})
+            atom_idx = parse(
+                Int, match(r"A(\d+)", atom_placeholder).captures[1]::SubString{String}
+            )
 
             if current_atom_idx != 0  # If there's a previous atom, create a bond
                 # Create bonds in both directions
@@ -226,13 +234,6 @@ function from_SMILES(smiles::String)
     return Molecule(atoms, bonds)
 end
 
-
-
-
-
-
-
-
 function to_SMILES(molecule::Molecule)::String
     if isempty(molecule.atoms)
         return ""
@@ -258,7 +259,6 @@ function to_SMILES(molecule::Molecule)::String
             push!(bonds_queue, bond)
         end
     end
-
 
     while !isempty(bonds_queue)
         bond = popfirst!(bonds_queue)
@@ -294,7 +294,14 @@ function to_SMILES(molecule::Molecule)::String
             visited_atoms[bond.to] = true
 
             for b in molecule.bonds
-                if !(b in bonds_queue) && !visited_bonds[b] && (b.from == bond.to || b.to == bond.to || b.from == bond.from || b.to == bond.from)
+                if !(b in bonds_queue) &&
+                   !visited_bonds[b] &&
+                   (
+                       b.from == bond.to ||
+                       b.to == bond.to ||
+                       b.from == bond.from ||
+                       b.to == bond.from
+                   )
                     push!(bonds_queue, b)
                 end
             end
@@ -302,7 +309,7 @@ function to_SMILES(molecule::Molecule)::String
     end
 
     function to_SMILES(atom_idx)
-        result = "["* molecule.atoms[atom_idx].name *"]"
+        result = "[" * molecule.atoms[atom_idx].name * "]"
 
         if haskey(ringbonds, atom_idx)
             for ringbond in ringbonds[atom_idx]
@@ -316,9 +323,9 @@ function to_SMILES(molecule::Molecule)::String
         for (i, neighbour) in enumerate(adjacency[atom_idx])
             bond = neighbour[2]
             if i == length(adjacency[atom_idx])
-                result *= bond* to_SMILES(neighbour[1])
+                result *= bond * to_SMILES(neighbour[1])
             else
-                result *= "(" *bond* to_SMILES(neighbour[1]) *")"
+                result *= "(" * bond * to_SMILES(neighbour[1]) * ")"
             end
         end
 
@@ -327,21 +334,6 @@ function to_SMILES(molecule::Molecule)::String
 
     return to_SMILES(1)
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # function to_SMILES(molecule::Molecule)::String
 #     if isempty(molecule.atoms)
@@ -353,7 +345,7 @@ end
 #     ringbonds = Dict{Int, Vector{Tuple{Int, String}}}()
 #     visited = falses(length(molecule.atoms))
 #     ring_digit = 1
-    
+
 #     # Build complete adjacency list from bonds
 #     complete_adj = Dict{Int, Vector{Tuple{Int, BondType}}}()
 #     for bond in molecule.bonds
@@ -366,15 +358,15 @@ end
 #         push!(complete_adj[bond.from], (bond.to, bond.bond_type))
 #         push!(complete_adj[bond.to], (bond.from, bond.bond_type))
 #     end
-    
+
 #     # DFS function to build the traversal-based adjacency map
 #     function dfs_build_adjacency(atom_idx, parent_idx=0)
 #         visited[atom_idx] = true
-        
+
 #         if !haskey(adjacency, atom_idx)
 #             adjacency[atom_idx] = []
 #         end
-        
+
 #         # Process all neighbors
 #         if haskey(complete_adj, atom_idx)
 #             for (neighbor, bond_type) in complete_adj[atom_idx]
@@ -382,9 +374,9 @@ end
 #                 if neighbor == parent_idx
 #                     continue
 #                 end
-                
+
 #                 bond_str = to_string(bond_type)
-                
+
 #                 if visited[neighbor]
 #                     # We found a ring closure
 #                     if !haskey(ringbonds, atom_idx)
@@ -404,10 +396,10 @@ end
 #             end
 #         end
 #     end
-    
+
 #     # Start DFS from atom 1
 #     dfs_build_adjacency(1)
-    
+
 #     # Recursive function to build the SMILES string (unchanged)
 #     function to_SMILES(atom_idx)
 #         result = "[" * molecule.atoms[atom_idx].name * "]"
@@ -421,7 +413,7 @@ end
 #         if !haskey(adjacency, atom_idx)
 #             return result
 #         end
-        
+
 #         for (i, neighbour) in enumerate(adjacency[atom_idx])
 #             bond = neighbour[2]
 #             if i == length(adjacency[atom_idx])

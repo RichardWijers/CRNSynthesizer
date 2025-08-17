@@ -14,8 +14,9 @@ function hash(a::LocalUniformBalancedReaction, h::UInt)
     return hash(a.path, h) + hash(a.input_atom_paths, h) + hash(a.output_atom_paths, h)
 end
 
-
-function HerbConstraints.shouldschedule(solver::Solver, constraint::LocalUniformBalancedReaction, path::Vector{Int})
+function HerbConstraints.shouldschedule(
+        solver::Solver, constraint::LocalUniformBalancedReaction, path::Vector{Int}
+)
     if path in constraint.input_atom_paths || path in constraint.output_atom_paths
         return true
     end
@@ -23,7 +24,9 @@ function HerbConstraints.shouldschedule(solver::Solver, constraint::LocalUniform
     return false
 end
 
-function HerbConstraints.propagate!(solver::Solver, constraint::LocalUniformBalancedReaction)
+function HerbConstraints.propagate!(
+        solver::Solver, constraint::LocalUniformBalancedReaction
+)
     input_atoms = Dict{Int, Int}()
     possible_inputs = Dict{Int, Int}()
     unfilled_inputs = 0
@@ -88,7 +91,7 @@ function HerbConstraints.propagate!(solver::Solver, constraint::LocalUniformBala
         for (atom, count) in input_atoms
             if !haskey(output_atoms, atom) || output_atoms[atom] != count
                 HerbConstraints.set_infeasible!(solver)
-                return
+                return nothing
             end
         end
     end
