@@ -33,8 +33,28 @@ end
 ############ Herb Functions #############
 #########################################
 
+
+
+# function HerbConstraints.notify_new_node(solver::GenericSolver, event_path::Vector{Int}, )
+#     if !isfeasible(solver) return end
+#     for c ∈ get_grammar(solver).constraints
+#         HerbConstraints.on_new_node(solver, c, event_path)
+#     end
+# end
+
+# function HerbConstraints.notify_new_nodes(solver::GenericSolver, node::AbstractRuleNode, path::Vector{Int})
+#     HerbConstraints.notify_new_node(solver, path)
+#     for (i, childnode) ∈ enumerate(get_children(node))
+#         HerbConstraints.notify_new_nodes(solver, childnode, push!(copy(path), i))
+#     end
+# end
+
+
+
 # HerbCore.is_domain_valid(c, grammar) = true
 # HerbCore.update_rule_indices!(c, new_indices) = nothing
+
+child(path::Vector{Int}, idx::Int)::Vector{Int} = push!(copy(path), idx)
 
 get_rules(rn::RuleNode)::Vector{Int} = [rn.ind]
 function get_rules(hole::AbstractHole)::Vector{Int}
@@ -141,6 +161,24 @@ function c_remove!(
         HerbConstraints.notify_tree_manipulation(solver, path)
         if fix_point
             HerbConstraints.fix_point!(solver)
+        end
+    end
+end
+
+function c_remove!(solver::GenericSolver, path::Vector{Int}, rules::Vector{Int}, fix_point::Bool = true)
+    hole = get_hole_at_location(solver, path)
+    domain_updated = false
+    for rule_index ∈ rules
+        if hole.domain[rule_index]
+            domain_updated = true
+            hole.domain[rule_index] = false
+        end
+    end
+    if domain_updated
+        HerbConstraints.simplify_hole!(solver, path)
+        HerbConstraints.notify_tree_manipulation(solver, path)
+        if fix_point
+            fix_point!(solver)
         end
     end
 end

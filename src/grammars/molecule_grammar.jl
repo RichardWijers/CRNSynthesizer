@@ -36,10 +36,7 @@ function SMILES_grammar(
         haskey(settings.options, :disable_valid_smiles) &&
         settings.options[:disable_valid_smiles]
     )
-        atom_dict, bond_dict = generate_atom_bond_dicts(grammar)
-        digit_to_grammar = generate_digit_to_grammar(grammar)
-        grammar_data = GrammarData(atom_dict, bond_dict, digit_to_grammar)
-        addconstraint!(grammar, ValidSMILES(grammar_data))
+        addconstraint!(grammar, ValidSMILES(grammar))
     end
 
     # Make the ringbonds list tail ended

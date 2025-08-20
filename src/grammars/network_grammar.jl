@@ -58,31 +58,31 @@ function network_grammar(
     )
 
     for molecule in molecules
-        add_rule!(grammar, :(molecule = $molecule))
+        atom_counts = count_atoms(molecule)
+        atom_counts_str = Symbol(join([string(k) * ":" * string(v) for (k, v) in atom_counts], ","))
+        add_rule!(grammar, :(molecule = $atom_counts_str))
+        add_rule!(grammar, :($atom_counts_str = $molecule))
     end
 
-    required = problem.required_molecules
-    required_rules = Vector{Tuple{Int, ReactionPosition}}()
-    for (i, required_molecule) in enumerate(required)
-        molecule = required_molecule.molecule
-        add_rule!(grammar, :(required_molecule = $molecule))
-        rule = findfirst(==(:($molecule)), grammar.rules)
-        push!(required_rules, (rule, required_molecule.position))
-    end
-
-    for molecule in required_molecules
-        add_rule!(grammar, :(required_molecule = $molecule))
-        rule = findfirst(==(:($molecule)), grammar.rules)
-        push!(required_rules, (rule, UNKNOWN))
-    end
-
-    if length(required) == 0 && length(required_molecules) == 0 && check_required
+    if length(problem.required_molecules) == 0 && length(problem.required_molecules) == 0 && check_required
         addconstraint!(grammar, Forbidden(@c_rulenode 7))
     elseif !(
         haskey(settings.options, :disable_contains_molecules) &&
         settings.options[:disable_contains_molecules]
     )
-        addconstraint!(grammar, ContainsMolecules(required_rules))
+
+        required_molecules = Vector{Tuple{Molecule, ReactionPosition}}()
+        for required_molecule in problem.required_molecules
+            if required_molecule.position == INPUT
+                push!(required_molecules, (required_molecule.molecule, INPUT))
+            elseif required_molecule.position == OUTPUT
+                push!(required_molecules, (required_molecule.molecule, OUTPUT))
+            else
+                push!(required_molecules, (required_molecule.molecule, UNKNOWN))
+            end
+        end
+
+        addconstraint!(grammar, ContainsMolecules(grammar, required_molecules))
     end
 
     return grammar

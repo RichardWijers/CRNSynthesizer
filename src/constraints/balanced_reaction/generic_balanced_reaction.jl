@@ -1,5 +1,7 @@
 struct LocalGenericBalancedReaction <: AbstractLocalConstraint
     path::Vector{Int}  # Path to the reaction node
+    rule_to_dict::Dict{Int, Dict{String, Int}}  # Mapping of rule indices to atom counts
+    hole_terminals::Vector{Int}  # Indices of terminal holes in the grammar
 end
 
 import Base.==
@@ -28,174 +30,213 @@ function HerbConstraints.shouldschedule(
     node = get_node_at_location(solver, path)
     type = get_node_type(solver.grammar, node)
 
-    # Only schedule for atoms or holes that could contain atoms
-    return type == :atom || (
-        node isa Hole && (
-        type == :chain ||
-        type == :structure ||
-        type == :branch ||
-        type == :branches ||
-        type == :molecule_list ||
-        type == :molecule
-    )
+    # Only schedule for holes that could contain atoms
+    return type == :atom ||
+           type == :chain ||
+           type == :structure ||
+           type == :branch ||
+           type == :branches ||
+           type == :molecule_list ||
+           type == :molecule
+end
+
+mutable struct RelevantCounts
+    atom_holes::Int
+    atoms_fixed::Dict{String, Int}
+    holes::Int
+    hole_paths::Vector{Vector{Int}}
+end
+
+import Base: +
+function +(a::RelevantCounts, b::RelevantCounts)::RelevantCounts
+    # Merge atom count dicts by summing values for matching keys
+    atoms = Dict{String, Int}()
+    for (k, v) in a.atoms_fixed
+        atoms[k] = get(atoms, k, 0) + v
+    end
+    for (k, v) in b.atoms_fixed
+        atoms[k] = get(atoms, k, 0) + v
+    end
+
+    return RelevantCounts(
+        a.atom_holes + b.atom_holes,
+        atoms,
+        a.holes + b.holes,
+        vcat(a.hole_paths, b.hole_paths)
     )
 end
 
-function get_relevant_paths(
-        solver::Solver, c::LocalGenericBalancedReaction, path::Vector{Int}
-)
+function get_relevant_counts(
+        solver::Solver, c::LocalGenericBalancedReaction, path::Vector{Int}, node::AbstractRuleNode, counts::RelevantCounts=RelevantCounts(0, Dict{String, Int}(), 0, Vector{Vector{Int}}())
+)::RelevantCounts
     # Get the relevant paths for the current node
-    # println(get_tree(solver))
-    # println("path = $path")
-    node = get_node_at_location(solver, path)
-    type = get_node_type(solver.grammar, node)
+    node_type = get_node_type(solver.grammar, node)
+
+    get_elem_from_atom_rule(rule_val) = begin
+        s = String(rule_val)
+        if startswith(s, "[") && endswith(s, "]")
+            return s[2:(end - 1)]
+        else
+            return s
+        end
+    end
 
     if isuniform(node)
-        @match type begin
+        @match node_type begin
             :molecule_list => begin
                 rule = HerbConstraints.get_rule(node)
                 @match solver.grammar.rules[rule] begin
-                    :(vcat([molecule],
-                        molecule_list)) => begin
-                        # Get the relevant paths for the molecule and list
-                        molecule_paths, molecule_holes,
-                        required_molecule_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 1)
+                    :(vcat([molecule], molecule_list)) ||
+                    :(vcat([required_molecule], molecule_list)) => begin
+                        get_relevant_counts(
+                            solver, c, child(path, 1), get_children(node)[1], counts
                         )
-                        list_paths, list_holes,
-                        required_molecule_list_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 2)
+                        get_relevant_counts(
+                            solver, c, push!(path, 2), get_children(node)[2], counts
                         )
 
-                        # Combine the paths and holes
-                        return vcat(molecule_paths, list_paths),
-                        vcat(molecule_holes, list_holes),
-                        vcat(required_molecule_paths, required_molecule_list_paths)
+                        return counts
                     end
-                    :(vcat([required_molecule],
-                        molecule_list)) => begin
-                        list_paths, list_holes,
-                        required_molecule_list_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 2)
-                        )
-
-                        return list_paths,
-                        list_holes,
-                        vcat(required_molecule_list_paths, push!(copy(path), 1))
+                    :(Vector{Molecule}()) => begin
+                        return counts
                     end
-                    :(Vector{Molecule}()) => return [], [], []
                     x => throw("Unknown molecule_list rule: $x")
                 end
             end
             :molecule => begin
-                return get_relevant_paths(solver, c, push!(copy(path), 1))
+                get_relevant_counts(solver, c, push!(path, 1), node.children[1], counts)
+
+                return counts
             end
             :chain => begin
                 rule = HerbCore.get_rule(node)
                 @match solver.grammar.rules[rule] begin
-                    :(SMILES_combine_chain(bond,
-                        structure,
-                        chain)) => begin
-                        # Get the relevant paths for the bond and structure
-                        structure_paths, structure_holes,
-                        required_structure_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 2)
-                        )
-                        chain_paths, chain_holes,
-                        required_chain_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 3)
-                        )
-
-                        # Combine the paths and holes
-                        return vcat(chain_paths, structure_paths),
-                        vcat(chain_holes, structure_holes),
-                        vcat(required_chain_paths, required_structure_paths)
-                    end
-                    :(structure * bond *
-                      chain) => begin
+                    :(structure * bond * chain) => begin
                         # Get the relevant paths for the structure and chain
-                        structure_paths, structure_holes,
-                        required_structure_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 1)
+                        get_relevant_counts(
+                            solver, c, child(path, 1), node.children[1], counts
                         )
-                        chain_paths, chain_holes,
-                        required_chain_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 3)
+                        get_relevant_counts(
+                            solver, c, push!(path, 3), node.children[3], counts
                         )
 
-                        # Combine the paths and holes
-                        return vcat(chain_paths, structure_paths),
-                        vcat(chain_holes, structure_holes),
-                        vcat(required_chain_paths, required_structure_paths)
+                        return counts
                     end
+                    :(SMILES_combine_chain(bond, structure, chain)) => begin
+                        # Get the relevant paths for the bond and structure
+                        get_relevant_counts(
+                            solver, c, child(path, 2), node.children[2], counts
+                        )
+                        get_relevant_counts(
+                            solver, c, push!(path, 3), node.children[3], counts
+                        )
+
+                        return counts
+                    end
+
                     :(atom * ringbonds) => begin
-                        atom_path = push!(copy(path), 1)
-                        return [atom_path], [], []
+                        # Get the relevant path for the atom
+                        atom_path = push!(path, 1)
+                        atom = get_node_at_location(solver, atom_path)
+
+                        if atom isa RuleNode
+                            # If the atom is filled, count it as a fixed atom
+                            rule_idx = HerbCore.get_rule(atom)
+                            rule_val = solver.grammar.rules[rule_idx]
+                            elem = get_elem_from_atom_rule(rule_val)
+
+                            counts.atoms_fixed[elem] = get(
+                                counts.atoms_fixed, elem, 0
+                            ) + 1
+
+                            return counts
+                        else
+                            counts.atom_holes += 1
+                            return counts
+                        end
                     end
                     x => throw("Unknown chain rule: $x")
                 end
             end
             :structure => begin
-                atom_path = push!(copy(path), 1)
-                branches_paths, branches_holes,
-                required_branches_paths = get_relevant_paths(
-                    solver, c, push!(copy(path), 3)
+                get_relevant_counts(
+                    solver, c, child(path, 3), node.children[3], counts
                 )
-                # Combine the paths and holes
-                return vcat([atom_path], branches_paths),
-                branches_holes,
-                required_branches_paths
+
+                atom_path = push!(path, 1)
+                atom = get_node_at_location(solver, atom_path)
+
+                if isfilled(atom)
+                    # If the atom is filled, count it as a fixed atom
+                    rule_idx = HerbCore.get_rule(atom)
+                    rule_val = solver.grammar.rules[rule_idx]
+                    elem = get_elem_from_atom_rule(rule_val)
+
+                    counts.atoms_fixed[elem] = get(
+                        counts.atoms_fixed, elem, 0
+                    ) + 1
+                else
+                    counts.atom_holes += 1
+                end
+
+                return counts
             end
             :ringbonds => begin
-                return [], [], []
+                return counts
             end
             :branches => begin
                 rule = HerbCore.get_rule(node)
                 @match solver.grammar.rules[rule] begin
-                    :(branch *
-                      branches) => begin
+                    :(branch * branches) => begin
                         # Get the relevant paths for the branch and branches
-                        branch_paths, branch_holes,
-                        required_branch_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 1)
+                        get_relevant_counts(
+                            solver, c, child(path, 1), node.children[1], counts
                         )
-                        branches_paths, branches_holes,
-                        required_branches_paths = get_relevant_paths(
-                            solver, c, push!(copy(path), 2)
+                        get_relevant_counts(
+                            solver, c, push!(path, 2), node.children[2], counts
                         )
 
-                        # Combine the paths and holes
-                        return vcat(branch_paths, branches_paths),
-                        vcat(branch_holes, branches_holes),
-                        vcat(required_branch_paths, required_branches_paths)
+                        return counts
                     end
-                    :("") => return [], [], []
+                    :("") => return counts
                     x => throw("Unknown branches rule: $x")
                 end
             end
             :branch => begin
-                return get_relevant_paths(solver, c, push!(copy(path), 2))
+                get_relevant_counts(solver, c, push!(path, 2), node.children[2], counts)
+                return counts
             end
-            x => throw("Unknown type: $x")
+            x => begin
+                atom_counts = c.rule_to_dict[get_rules(node)[1]]
+                for (elem, count) in atom_counts
+                    counts.atoms_fixed[elem] = get(counts.atoms_fixed, elem, 0) + count
+                end
+                return counts
+            end
         end
     else
-        @match type begin
-            :molecule_list => begin
-                return Vector{Vector{Int}}(), [path], []
-            end
+        @match node_type begin
             :ringbonds => begin
-                return [], [], []
+                return counts
             end
-            :branches => begin
-                return [], [path], []
-            end
-            :chain => begin
-                return [], [path], []
-            end
+            :branches ||
+            :chain ||
+            :molecule_list ||
             :molecule => begin
-                return [], [path], []
+                counts.holes += 1
+                push!(counts.hole_paths, path)
+                return counts
             end
-            x => throw("Unknown type: $x")
+            x => begin
+                # return RelevantCounts(
+                #     0, Dict{String, Int}(), 1, [path]
+                # )
+                atom_counts = c.rule_to_dict[get_rules(node)[1]]
+                for (elem, count) in atom_counts
+                    counts.atoms_fixed[elem] = get(counts.atoms_fixed, elem, 0) + count
+                end
+                return counts
+            end
         end
     end
 end
@@ -204,75 +245,86 @@ function HerbConstraints.propagate!(
         solver::Solver, constraint::LocalGenericBalancedReaction
 )
     node = get_node_at_location(solver, constraint.path)
-    type = get_node_type(solver.grammar, node)
-
     if !isuniform(node)
         return nothing
     end
 
-    left_path = push!(copy(constraint.path), 1)
-    right_path = push!(copy(constraint.path), 2)
+    left_path = child(constraint.path, 1)
+    right_path = child(constraint.path, 2)
 
-    left_atoms, left_holes,
-    required_left_molecules = get_relevant_paths(
-        solver, constraint, left_path
+    left_node = get_node_at_location(solver, left_path)
+    right_node = get_node_at_location(solver, right_path)
+    
+    # Get the relevant counts for the left side
+    left_counts = get_relevant_counts(
+        solver, constraint, left_path, left_node
     )
-    right_atoms, right_holes,
-    required_right_molecules = get_relevant_paths(
-        solver, constraint, right_path
+
+    # Only continue if the are no holes anymore on the left side (leftmost heuristic)
+    if left_counts.holes > 0
+        return
+    end
+
+    # Get the relevant counts for the right side
+    right_counts = get_relevant_counts(
+        solver, constraint, right_path, right_node
     )
 
-    # println("Counting atoms and holes...")
-    # println("Left side:")
-    # println("Atoms: $(length(left_atoms)), Holes: $(length(left_holes))")
-    # println("Right side:")
-    # println("Atoms: $(length(right_atoms)), Holes: $(length(right_holes))")
+    # Get the relevant atom counts
+    left_atoms = left_counts.atoms_fixed
+    right_atoms = right_counts.atoms_fixed
+    all_keys = union(collect(keys(left_atoms)), collect(keys(right_atoms)))
+    difference = Dict{String, Int}()
+    for k in all_keys
+        left_count = get(left_atoms, k, 0)
+        right_count = get(right_atoms, k, 0)
+        if left_count != right_count
+            difference[k] = left_count - right_count
+        end
+    end
 
-    hole_terminals = findall(solver.grammar.isterminal)
+    # If there are any negative values in the difference (the left side needs additional atoms), the solver is infeasible
+    if any(v -> v < 0, values(difference))
+        HerbConstraints.set_infeasible!(solver)
+        return
+    end
 
-    # Fix all the holes on the right side if there can't be more atoms
-    if length(left_holes) == 0 &&
-       length(left_atoms) == length(right_atoms) &&
-       length(right_holes) > 0
-        for hole in right_holes
+    # If there are no holes on the right side and the right side needs additional atoms, the solver is infeasible
+    if right_counts.holes == 0 && any(v -> v > 0, values(difference))
+        HerbConstraints.set_infeasible!(solver)
+        return
+    end
+
+
+
+    if length(keys(difference)) == 0
+        for hole in right_counts.hole_paths
             node = get_node_at_location(solver, hole)
-            # println("Fixing hole: $node")
-            c_remove_all_but!(solver, hole, hole_terminals, false)
-            node = get_node_at_location(solver, hole)
-            # println("Fixed hole: $node")
+            c_remove_all_but!(solver, hole, constraint.hole_terminals, false)
         end
+        return
     end
 
-    # Both sides can not get any more atoms, so they should be the same
-    if length(left_holes) == 0 && length(right_holes) == 0
-        if length(left_atoms) != length(right_atoms)
-            HerbConstraints.set_infeasible!(solver)
-            # println("infeasible")
-            return nothing
-        end
+    if right_counts.holes == 1
+        c_remove!(solver, right_counts.hole_paths[1], constraint.hole_terminals, false)
+        return
     end
 
-    # Only the right side can get atoms, so it should be the same or more as the left side
-    if length(left_holes) == 0 && length(right_holes) > 0
-        if length(left_atoms) < length(right_atoms)
-            HerbConstraints.set_infeasible!(solver)
-            # println("infeasible")
-            return nothing
+
+    # Gather the rules that make the solver infeasible
+    # (Rules that make the atom counts on the right side more than the left side)
+    impossible_rules = Vector{Int}()
+    for (rule, count) in constraint.rule_to_dict
+        for (k, rule_count) in count
+            diff = get(difference, k, 0)
+            if !(diff + rule_count > 0)
+                push!(impossible_rules, rule)
+                continue
+            end
         end
     end
-
-    # Only the left side can get atoms, so it should be the same or more as the right side
-    if length(right_holes) == 0 && length(left_holes) > 0
-        if length(right_atoms) < length(left_atoms)
-            HerbConstraints.set_infeasible!(solver)
-            # println("infeasible")
-            return nothing
-        end
-    end
-
-    if length(left_holes) == 0 && length(right_holes) == 0
-        # println("deactivated")
-        HerbConstraints.deactivate!(solver, constraint)
-        return nothing
+    
+    for hole in right_counts.hole_paths
+        c_remove!(solver, hole, impossible_rules, false)
     end
 end

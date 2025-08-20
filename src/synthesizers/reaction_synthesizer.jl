@@ -30,10 +30,14 @@ function synthesize_reactions(
     grammar = reaction_grammar(molecules; settings = settings)
     iterator = get_iterator(settings, grammar, :reaction)
 
+    # println(grammar)
+
     candidates = Vector{Reaction}()
     start_time = time()
     for program in iterator
         reaction = interpret_reaction(program, grammar)
+
+        # println("\x1b[1mSynthesized reaction: $reaction\x1b[0m")
 
         push!(candidates, reaction)
 

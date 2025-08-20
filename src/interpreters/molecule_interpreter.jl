@@ -10,7 +10,15 @@ function interpret_molecule(program::AbstractRuleNode, grammar::AbstractGrammar)
             return from_SMILES(interpret_chain(program.children[1], grammar))
         end
 
-        _ => throw(ArgumentError("Unknown rule: $rule"))
+        _ => begin
+            child = program.children[1]
+            mol = grammar.rules[get_rule(child)]
+            if mol isa Molecule
+                return mol
+            else
+                throw(ArgumentError("Unknown rule: $rule"))
+            end
+        end
     end
 end
 

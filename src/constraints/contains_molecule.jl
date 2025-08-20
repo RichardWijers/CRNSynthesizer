@@ -10,7 +10,10 @@ function ContainsMolecules(
     required_rules = Vector{Tuple{Int, ReactionPosition}}()
 
     for (i, (required_molecule, position)) in enumerate(molecules)
-        add_rule!(grammar, :(required_molecule = $required_molecule))
+        atom_counts = count_atoms(required_molecule)
+        atom_counts_str = Symbol(join([string(k) * ":" * string(v) for (k, v) in atom_counts], ","))
+        add_rule!(grammar, :(required_molecule = $atom_counts_str))
+        add_rule!(grammar, :($atom_counts_str = $required_molecule))
         rule = findfirst(==(:($required_molecule)), grammar.rules)
         push!(required_rules, (rule, position))
     end
@@ -164,6 +167,9 @@ mutable struct RequiredPlaces
 end
 
 function HerbConstraints.propagate!(solver::Solver, c::LocalGenericContainsMolecules)
+
+    return
+
     node = get_node_at_location(solver, c.path)
     input_rules = [rule for (rule, position) in c.rules if position == INPUT]
     output_rules = [rule for (rule, position) in c.rules if position == OUTPUT]

@@ -40,7 +40,7 @@ function reaction_grammar(;
         haskey(settings.options, :disable_balanced_reaction) &&
         settings.options[:disable_balanced_reaction]
     )
-        addconstraint!(grammar, BalancedReaction(; complete_grammar = complete_grammar))
+        addconstraint!(grammar, BalancedReaction())
     end
 
     return grammar
@@ -52,7 +52,10 @@ function reaction_grammar(
     grammar = reaction_grammar(; settings = settings, complete_grammar = false)
 
     for molecule in molecules
-        add_rule!(grammar, :(molecule = $molecule))
+        atom_counts = count_atoms(molecule)
+        atom_counts_str = Symbol(atom_counts)
+        c_add_rule!(grammar, :(molecule = $atom_counts_str), recalculate=true)
+        c_add_rule!(grammar, :($atom_counts_str = $molecule), recalculate=true)
     end
 
     return grammar
